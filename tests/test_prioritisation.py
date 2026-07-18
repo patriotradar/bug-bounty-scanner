@@ -171,6 +171,8 @@ def test_sql_injection_remediation_suggested():
 
 def test_evidence_included_in_suggestions():
     f = _make_finding(1, "Test", severity="medium")
-    ev = [_make_evidence(1, 1, "url", url="https://poc.example.com")]
+    ev_url = "https://poc.example.com"
+    ev = [_make_evidence(1, 1, "url", url=ev_url)]
     sections = suggest_report_sections(f, ev)
-    assert "https://poc.example.com" in sections["evidence_summary"]
+    # Check the evidence URL is referenced in the summary text
+    assert sections["evidence_summary"].find(ev_url) != -1
