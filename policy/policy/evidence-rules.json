@@ -1,0 +1,57 @@
+{
+  "mode": "human-approved-minimal-evidence",
+  "require_manual_approval": true,
+  "stop_after_first_proof": true,
+
+  "limits": {
+    "maximum_requests": 5,
+    "maximum_records_accessed": 1,
+    "maximum_screenshots": 3,
+    "maximum_runtime_seconds": 60
+  },
+
+  "allowed_actions": {
+    "capture_screenshot": true,
+    "capture_request_metadata": true,
+    "capture_response_metadata": true,
+    "capture_redacted_response_body": true,
+    "repeat_approved_request": true
+  },
+
+  "blocked_actions": {
+    "automatic_exploitation": true,
+    "privilege_escalation": true,
+    "command_execution": true,
+    "credential_access": true,
+    "credential_stuffing": true,
+    "brute_force": true,
+    "persistence": true,
+    "malware_delivery": true,
+    "bulk_enumeration": true,
+    "bulk_data_download": true,
+    "access_other_users_data": true,
+    "modify_real_user_data": true,
+    "delete_data": true,
+    "denial_of_service": true,
+    "bypass_rate_limits": true
+  },
+
+  "state_changes": {
+    "allowed": false,
+    "exception": "Only an explicitly approved action involving data created by the researcher account."
+  },
+
+  "evidence": {
+    "include_timestamp": true,
+    "include_programme": true,
+    "include_asset": true,
+    "include_researcher_account_id": true,
+    "include_action_summary": true,
+    "include_request_count": true,
+    "redact_authorization_headers": true,
+    "redact_cookies": true,
+    "redact_api_tokens": true,
+    "redact_passwords": true,
+    "redact_personal_data": true
+  }
+}
