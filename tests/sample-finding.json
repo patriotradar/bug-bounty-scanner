@@ -1,0 +1,11 @@
+{
+  "template-id": "lab-test-finding",
+  "matched-at": "http://localhost:3000/test",
+  "host": "http://localhost:3000",
+  "type": "http",
+  "info": {
+    "name": "Safe Lab Policy Test",
+    "severity": "medium",
+    "description": "A fake finding used only to test the verification gate."
+  }
+}
