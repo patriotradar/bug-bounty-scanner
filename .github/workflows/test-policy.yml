@@ -1,0 +1,20 @@
+name: Test Lab Policy Gate
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-policy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Run policy checker
+        run: |
+          python3 scripts/verify_policy.py \
+            --finding tests/sample-finding.json
