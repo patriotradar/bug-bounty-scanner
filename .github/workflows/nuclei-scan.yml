@@ -1,124 +1,83 @@
-name: Safe Nuclei Scan
+name: Medium and High Nuclei Scan
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
-  nuclei:
+  nuclei-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
 
     steps:
       - name: Download repository
         uses: actions/checkout@v4
 
-      - name: Validate target list
-        shell: bash
+      - name: Check targets file
         run: |
-          set -euo pipefail
-
-          if [ ! -s targets.txt ]; then
-            echo "targets.txt is empty."
+          if [ ! -f targets.txt ]; then
+            echo "ERROR: targets.txt was not found."
+            echo "Create targets.txt in the main repository folder."
             exit 1
           fi
 
-          if grep -Ev '^(#|[[:space:]]*$|https://)' targets.txt; then
-            echo "Every target must start with https://"
-            exit 1
-          fi
+          echo "Targets being scanned:"
+          cat targets.txt
 
-          if grep -F '*' targets.txt; then
-            echo "Wildcards are not allowed."
-            exit 1
-          fi
-
-      - name: Prepare report folder
-        run: mkdir -p reports
-
-      - name: Run conservative Nuclei scan
-        shell: bash
+      - name: Install Nuclei
         run: |
-          docker run --rm \
-            -v "$PWD:/workspace" \
-            projectdiscovery/nuclei:latest \
-            -l /workspace/targets.txt \
-            -severity low,medium,high,critical \
-            -exclude-tags dos,fuzz,intrusive,bruteforce \
-            -rate-limit 2 \
-            -bulk-size 1 \
-            -concurrency 1 \
-            -timeout 10 \
-            -retries 1 \
-            -jsonl-export /workspace/reports/nuclei-results.jsonl \
+          curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest \
+          | grep "browser_download_url.*linux_amd64.zip" \
+          | cut -d '"' -f 4 \
+          | wget -qi -
+
+          unzip -o nuclei_*_linux_amd64.zip
+          sudo mv nuclei /usr/local/bin/nuclei
+
+          nuclei -version
+
+      - name: Update Nuclei templates
+        run: |
+          nuclei -update-templates
+
+      - name: Run medium and high scan
+        continue-on-error: true
+        run: |
+          mkdir -p scan-results
+
+          nuclei \
+            -list targets.txt \
+            -severity medium,high \
+            -exclude-tags dos,fuzz,bruteforce,credential-stuffing,token-spray \
+            -rate-limit 10 \
+            -concurrency 5 \
+            -bulk-size 3 \
+            -timeout 8 \
+            -retries 0 \
+            -max-host-error 20 \
+            -jsonl-export scan-results/nuclei-results.jsonl \
+            -markdown-export scan-results/markdown \
             -stats
 
-      - name: Create readable report
+      - name: Create empty results file if nothing was found
         if: always()
-        shell: bash
         run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
+          mkdir -p scan-results
 
-          source = Path("reports/nuclei-results.jsonl")
-          report = Path("reports/readable-report.txt")
+          if [ ! -f scan-results/nuclei-results.jsonl ]; then
+            touch scan-results/nuclei-results.jsonl
+          fi
 
-          if not source.exists() or source.stat().st_size == 0:
-              report.write_text(
-                  "No Nuclei findings were produced.\n",
-                  encoding="utf-8"
-              )
-              raise SystemExit(0)
+          echo "Scan completed."
+          echo "Number of findings:"
+          wc -l scan-results/nuclei-results.jsonl
 
-          findings = []
-
-          for line in source.read_text(
-              encoding="utf-8",
-              errors="replace"
-          ).splitlines():
-              try:
-                  item = json.loads(line)
-              except json.JSONDecodeError:
-                  continue
-
-              info = item.get("info") or {}
-
-              findings.append({
-                  "name": info.get("name", "Unnamed finding"),
-                  "severity": info.get("severity", "unknown"),
-                  "template": item.get("template-id", "unknown"),
-                  "host": item.get("host", ""),
-                  "matched": item.get("matched-at", ""),
-                  "description": info.get("description", "")
-              })
-
-          with report.open("w", encoding="utf-8") as output:
-              output.write(
-                  "NUCLEI REVIEW REPORT\n"
-                  "====================\n\n"
-                  "These are leads, not confirmed vulnerabilities.\n\n"
-              )
-
-              for number, finding in enumerate(findings, start=1):
-                  output.write(f"Finding {number}\n")
-                  output.write(f"Name: {finding['name']}\n")
-                  output.write(f"Severity: {finding['severity']}\n")
-                  output.write(f"Template: {finding['template']}\n")
-                  output.write(f"Host: {finding['host']}\n")
-                  output.write(f"Matched at: {finding['matched']}\n")
-                  output.write(
-                      f"Description: {finding['description']}\n\n"
-                  )
-          PY
-
-      - name: Upload report
+      - name: Upload scan results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nuclei-scan-report
-          path: reports/
-          if-no-files-found: warn
-          retention-days: 7
+          name: nuclei-medium-high-results
+          path: scan-results/
+          retention-days: 14
