@@ -1,0 +1,157 @@
+{
+  "programmes": [
+    {
+      "id": "trip",
+      "name": "Trip.com Group",
+      "enabled": true,
+      "account_required": true,
+
+      "assets": [
+        {
+          "value": "*.trip.com",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "<locale>.trip.com",
+          "type": "locale-wildcard",
+          "priority": "high"
+        },
+        {
+          "value": "*.trip.biz",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.travix.com",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.travix.io",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.trainpal.com",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.mytrainpal.com",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.cheaptickets.nl",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.triplinkintl.com",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.tyo-masters.co.jp",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.budgetair.com",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.flugladen.de",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.vayama.com",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "*.vliegwinkel.nl",
+          "type": "wildcard",
+          "priority": "low"
+        },
+        {
+          "value": "app.blueskytravelvietnam.com",
+          "type": "url",
+          "priority": "low"
+        }
+      ],
+
+      "rules": {
+        "automated_scanning": false,
+        "authenticated_testing": true,
+        "multiple_test_accounts": false,
+        "only_owned_accounts": true,
+        "avoid_service_disruption": true,
+        "one_vulnerability_per_report": true,
+        "detailed_reproduction_required": true,
+        "rate_limit_notes": "No confirmed automation or request-rate limit recorded. Keep automated scanning disabled until explicitly verified.",
+
+        "temporarily_doubled_severities": [
+          "high",
+          "critical"
+        ],
+
+        "paid_low_range_usd": {
+          "minimum": 50,
+          "maximum": 200
+        },
+
+        "priority_categories": [
+          "authorization flaw",
+          "business logic flaw",
+          "sensitive data exposure",
+          "stored cross-site scripting",
+          "production-impacting configuration exposure"
+        ],
+
+        "unpaid_categories": [
+          "account brute force without successful access",
+          "self-xss",
+          "pdf-xss",
+          "flash-based xss",
+          "reflected xss",
+          "dom xss",
+          "email spoofing",
+          "session fixation",
+          "clickjacking",
+          "ui redressing",
+          "https issues",
+          "ssl issues",
+          "tls issues",
+          "csv injection",
+          "phishing",
+          "software version disclosure",
+          "login csrf",
+          "logout csrf",
+          "unauthenticated low-impact csrf",
+          "session not invalidated after logout",
+          "missing security headers without direct impact",
+          "ssrf with dns callback only and no internal impact",
+          "html injection without javascript execution",
+          "denial of service",
+          "obsolete-browser-only issues",
+          "ordinary system information leakage",
+          "ordinary open redirect",
+          "email bombing",
+          "sms bombing"
+        ],
+
+        "no_bounty_assets_or_conditions": [
+          "third-party hosted services",
+          "partner systems such as Skyscanner, Google Flights or Kayak",
+          "DNS-related Travix findings during the stated migration period",
+          "testing environments unless they demonstrably compromise production",
+          "URLs containing inrule"
+        ]
+      }
+    }
+  ]
+}
