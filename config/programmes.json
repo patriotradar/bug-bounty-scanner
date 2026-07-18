@@ -1,0 +1,18 @@
+{
+  "programmes": [
+    {
+      "id": "trip",
+      "name": "Trip",
+      "enabled": true,
+      "account_required": true,
+      "assets": [],
+      "rules": {
+        "automated_scanning": false,
+        "authenticated_testing": true,
+        "multiple_test_accounts": false,
+        "rate_limit_notes": "",
+        "prohibited_tests": []
+      }
+    }
+  ]
+}
