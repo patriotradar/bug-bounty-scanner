@@ -44,6 +44,19 @@ with col3:
         st.error("Approved accounts file missing")
 
 st.divider()
+st.subheader("Programme")
+
+programme_options = ["trip"]
+
+selected_programme = st.selectbox(
+    "Choose the bug bounty programme",
+    options=programme_options,
+    format_func=lambda value: value.title(),
+)
+
+st.success(f"Selected programme: {selected_programme.title()}")
+
+st.divider()
 st.subheader("Approved researcher accounts")
 
 if not accounts_file.exists():
@@ -63,6 +76,12 @@ enabled_accounts = [
     if account.get("enabled") is True
 ]
 
+programme_accounts = [
+    account
+    for account in enabled_accounts
+    if selected_programme in account.get("approved_programmes", [])
+]
+
 if not enabled_accounts:
     st.warning("No researcher accounts are currently enabled.")
 else:
@@ -70,12 +89,25 @@ else:
         email = account.get("email", "Missing email")
         label = account.get("label", "Unnamed account")
         account_id = account.get("id", "missing-id")
+        approved_programmes = account.get("approved_programmes", [])
 
         with st.container(border=True):
             st.write(f"**{label}**")
             st.write(email)
             st.caption(f"Account ID: {account_id}")
-            st.success("Approved and enabled")
+            st.caption(
+                "Approved programmes: "
+                + (
+                    ", ".join(approved_programmes)
+                    if approved_programmes
+                    else "None"
+                )
+            )
+
+            if selected_programme in approved_programmes:
+                st.success("Approved for the selected programme")
+            else:
+                st.error("Not approved for the selected programme")
 
 st.info(
     "Passwords, session cookies and API tokens must not be stored in "
@@ -85,10 +117,10 @@ st.info(
 st.divider()
 st.subheader("Active research account")
 
-if enabled_accounts:
+if programme_accounts:
     selected_account = st.selectbox(
         "Choose the account to use",
-        options=enabled_accounts,
+        options=programme_accounts,
         format_func=lambda account: (
             f"{account.get('label', 'Unnamed account')} "
             f"({account.get('email', 'Missing email')})"
@@ -108,9 +140,8 @@ if enabled_accounts:
         )
 else:
     selected_account = None
-    st.warning(
-        "No enabled accounts are available. Enable an authorised account "
-        "in config/approved-accounts.json."
+    st.error(
+        "No enabled account is approved for the selected programme."
     )
 
 st.divider()
@@ -118,7 +149,7 @@ st.subheader("Safety check")
 
 account_confirmed = st.checkbox(
     "I confirm that the selected account belongs to me and is authorised "
-    "for this programme."
+    "for the selected programme."
 )
 
 if selected_account and account_confirmed:
@@ -130,14 +161,36 @@ elif selected_account:
     )
 
 st.divider()
+st.subheader("Authenticated testing status")
+
+if not selected_account:
+    st.error(
+        "Blocked: no approved account is available for this programme."
+    )
+elif selected_programme not in selected_account.get(
+    "approved_programmes", []
+):
+    st.error(
+        "Blocked: the selected account is not approved for this programme."
+    )
+elif not account_confirmed:
+    st.error("Blocked: account ownership has not been confirmed.")
+else:
+    st.success(
+        "Ready for the next stage. Authenticated controls may use only "
+        f"{selected_account.get('email')} for "
+        f"{selected_programme.title()}."
+    )
+
+st.divider()
 st.subheader("Current workflow")
 
 st.markdown(
     """
-    1. Confirm the programme rules and authorised scope.
-    2. Add only researcher accounts you created and control.
-    3. Select the approved account to use.
-    4. Confirm that the account is authorised for the programme.
+    1. Select the authorised bug bounty programme.
+    2. Load only accounts explicitly approved for that programme.
+    3. Select the account you created and control.
+    4. Confirm ownership and authorisation.
     5. Run only permitted checks against in-scope targets.
     6. Review findings manually.
     7. Save the smallest necessary evidence.
@@ -145,19 +198,7 @@ st.markdown(
     """
 )
 
-st.subheader("Authenticated testing status")
-
-if not selected_account:
-    st.error("Blocked: no approved research account is enabled.")
-elif not account_confirmed:
-    st.error("Blocked: account ownership has not been confirmed.")
-else:
-    st.success(
-        "Ready for the next stage. Authenticated controls may use only "
-        f"{selected_account.get('email')}."
-    )
-
 st.info(
-    "The dashboard does not currently log in to any website or store "
-    "credentials. Secure credential handling will be added separately."
+    "The dashboard still does not log in to any website, store credentials "
+    "or send authenticated requests."
 )
