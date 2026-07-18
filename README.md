@@ -1,211 +1,150 @@
-# 🛡️ ScopeGuard AI
+# ScopeGuard AI
 
-> **Authorised bug bounty and security research management platform.**
-> A human-controlled workflow tool — it never autonomously performs offensive testing or exploitation.
+ScopeGuard AI is a professional, human-controlled workspace for organising authorised bug-bounty and security research. It manages programmes, scope assets, findings, evidence, reports and an audit timeline without autonomously testing or exploiting targets.
 
-![Python](https://img.shields.io/badge/Python-3.12-blue)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.47-red)
-![SQLite](https://img.shields.io/badge/Database-SQLite-green)
-![Tests](https://img.shields.io/badge/Tests-60%20passing-brightgreen)
+The repository now contains two connected implementations:
 
----
+- A mobile-first Next.js application for Vercel, backed by a dedicated Supabase PostgreSQL database.
+- The original Streamlit application for local Python use, backed by SQLite.
 
-## Overview
+> Only work on assets for which you have current, explicit authorisation. Confirm programme rules at the source before every research session. ScopeGuard does not replace those rules.
 
-ScopeGuard AI is a professional, modular Streamlit application for managing authorised bug bounty and security research workflows. It helps you:
+## Features
 
-- Organise programmes and their in-scope assets
-- Track vulnerability findings through an investigation workflow
-- Attach and manage evidence per finding
-- Draft and export professional vulnerability reports
-- Analyse findings with HexiStrike (advisory only — no attacks)
-- Maintain a complete audit trail
+- SQLite-backed Programme Manager with scope assets, enable/disable controls and review dates.
+- Finding workflow: New → Investigating → Needs Evidence → Verified → Ready to Report → Submitted → Closed.
+- Multiple structured evidence items per finding with redaction reminders.
+- Editable reports with Markdown export.
+- Dashboard, Daily Brief, programme health, severity charts and 30-day trends.
+- Global search across programme, asset, severity, status and dates.
+- Activity history for material record changes.
+- HexiStrike offline analysis for evidence gaps, duplicate hints, transparent prioritisation and draft assistance.
+- Preserved human Review Queue and existing policy gates.
 
----
+HexiStrike is intentionally analysis-only. It never contacts a target, runs a scanner, selects an exploit or performs an offensive action.
 
 ## Installation
 
-### Prerequisites
+### Vercel/mobile application
 
-- Python 3.12+
-- pip
+Requires Node.js 20 or newer and a separate Supabase project.
 
-### Quick Start
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Run `supabase/migrations/001_scopeguard.sql` in the new Supabase project's SQL Editor, then enter its URL and publishable key in `.env.local`. See [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md) for the secure production checklist.
+
+### Local Streamlit application
+
+Requires Python 3.11 or newer.
 
 ```bash
 git clone https://github.com/patriotradar/bug-bounty-scanner.git
 cd bug-bounty-scanner
-
-pip install -r app/requirements.txt
-
-# Launch the dashboard
-streamlit run app/dashboard.py --server.address 0.0.0.0 --server.port 8501
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python scripts/init_db.py
 ```
 
-Or use the included shell script:
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`.
+
+## Run Streamlit
 
 ```bash
-bash app/run_dashboard.sh
+python -m streamlit run app/dashboard.py
 ```
 
-The SQLite database is created automatically at `data/scopeguard.db` on first run.
-
----
+Open the local URL printed by Streamlit. The sidebar connects the Dashboard, Review Queue, Daily Brief, Programmes, Findings, Evidence, Reports, Analysis, Global Search and Settings pages.
 
 ## Configuration
 
-All settings are managed through the **⚙️ Settings** page in the UI, or directly in the `settings` table of the SQLite database.
+The default database is `data/scopeguard.db`. Override it before starting the application:
 
-| Setting | Default | Description |
-|---|---|---|
-| `app_name` | ScopeGuard AI | Display name |
-| `theme` | dark | UI theme |
-| `db_path` | data/scopeguard.db | Database file path |
-| `reports_dir` | reports/ | Markdown export directory |
-| `screenshots_dir` | data/screenshots/ | Screenshots directory |
-| `github_actions_enabled` | false | GitHub Actions integration |
+```bash
+export SCOPEGUARD_DB_PATH=/absolute/path/to/scopeguard.db
+```
 
----
+The original `config/programmes.json` is imported idempotently on startup so the repository's existing programme configuration is preserved. It remains available for the original policy workflow, while the application uses SQLite as its operational store.
+
+Never place passwords, API keys, session cookies, private keys or recovery codes in settings, evidence notes, JSON files or source control. Use the encrypted secret store of the eventual deployment platform for future integrations.
 
 ## Usage
 
-### Navigation
+1. Add or review an authorised programme and record its exact scope summary.
+2. Add each in-scope asset and its type.
+3. Record a manually identified finding and progress it through the workflow.
+4. Attach safely redacted evidence.
+5. Use Analysis to review evidence gaps, possible duplicates and work priority.
+6. Generate a report draft, edit every field and export Markdown.
+7. Record submission and closure only after the relevant human action occurs.
 
-| Page | Purpose |
-|---|---|
-| 🏠 Dashboard | Live statistics, charts, programme health, recent activity |
-| 📋 Daily Brief | Today's priorities, pending reports, activity timeline |
-| 🎯 Programmes | Create/edit/delete programmes and assets |
-| 🐛 Findings | Full CRUD for vulnerability findings with workflow |
-| 🔍 Evidence | Attach notes, URLs, screenshots, HTTP requests/responses |
-| 📄 Reports | Generate, edit and export markdown reports |
-| 🔎 Search | Global search across all data |
-| ⚡ HexiStrike | AI-assisted analysis, prioritisation, duplicate detection |
-| ⚙️ Settings | Application configuration |
-| 📜 Activity History | Immutable audit log |
-| ✅ Review Queue | Human-approval queue for verification proposals |
-
-### Workflow
-
-```
-New → Investigating → Needs Evidence → Verified → Submitted → Closed
-```
-
----
+The Review Queue continues to record approval or rejection of proposed minimal verification. Approval is an audit decision only; the UI does not execute the proposal.
 
 ## Architecture
 
-```
-bug-bounty-scanner/
-├── app/
-│   ├── dashboard.py          # Main Streamlit entry point
-│   ├── pages/                # Streamlit multi-page navigation
-│   │   ├── 1_Daily_Brief.py
-│   │   ├── 2_Programmes.py
-│   │   ├── 3_Findings.py
-│   │   ├── 4_Evidence.py
-│   │   ├── 5_Reports.py
-│   │   ├── 6_Search.py
-│   │   ├── 7_Settings.py
-│   │   ├── 8_Activity_History.py
-│   │   ├── 9_HexiStrike.py
-│   │   └── 10_Review_Queue.py
-│   └── requirements.txt
-├── database/
-│   ├── db.py                 # Connection manager, query helpers
-│   └── schema.py             # DDL CREATE statements
-├── models/
-│   ├── programme.py
-│   ├── asset.py
-│   ├── finding.py
-│   ├── evidence.py
-│   └── report.py
-├── services/
-│   ├── programme_service.py
-│   ├── finding_service.py
-│   ├── evidence_service.py
-│   ├── report_service.py
-│   ├── activity_service.py
-│   └── settings_service.py
-├── hexistrike/
-│   ├── analysis.py           # Finding quality analysis, duplicate detection
-│   ├── prioritiser.py        # Work queue prioritisation
-│   └── report_helper.py      # Report drafting suggestions
-├── history/
-│   └── logger.py             # Immutable activity log writer
-├── utilities/
-│   └── helpers.py            # Shared formatters and badge helpers
-├── tests/
-│   ├── test_db.py
-│   ├── test_crud.py
-│   ├── test_reports.py
-│   ├── test_prioritisation.py
-│   └── test_history.py
-├── config/                   # Legacy JSON config (preserved)
-├── policy/                   # Policy rules (preserved)
-├── data/                     # SQLite DB, action queue
-├── CHANGELOG.md
-└── README.md
+```text
+app/             Streamlit entry point and connected pages
+src/app/         Mobile-first Next.js pages used by Vercel
+src/components/  Responsive application shell and shared UI
+src/lib/         Supabase sessions, server actions and web types
+supabase/        PostgreSQL schema and row-level security migration
+database/        SQLite connection, schema and reusable repositories
+models/          Shared choices and workflow definitions
+services/        Programme, finding, evidence, reporting, search and dashboard logic
+hexistrike/      Offline analysis, prioritisation and report assistance
+reports/         Markdown rendering
+history/         Central activity audit logger
+utilities/       Bootstrap and reusable UI helpers
+policy/          Existing verification safety policy
+scripts/         Database setup and preserved policy utilities
+tests/           Database, CRUD, reports, prioritisation and history tests
 ```
 
----
+Business logic lives outside Streamlit pages. Services use parameterised SQLite queries, transactions, foreign keys and indexes. Material service changes write to `activity_history`.
 
-## Testing
+## Tests
 
 ```bash
-pip install pytest
-pytest tests/ -v
+python -m pytest
+python -m compileall app database models services hexistrike reports history utilities
+python scripts/verify_policy.py --finding tests/sample-finding.json
 ```
 
-60 tests covering database, CRUD, reports, HexiStrike analysis and history logging.
+For the Vercel application:
 
----
+```bash
+npm run typecheck
+npm run build
+```
+
+The existing GitHub Actions dashboard and policy checks remain in place.
 
 ## Screenshots
 
-_Screenshots placeholder — add after first deployment._
+Screenshots will be added after the first deployment visual QA pass:
 
----
+- Dashboard overview
+- Programme Manager
+- Finding workflow
+- Report editor
+- HexiStrike analysis
+
+## Sprint history
+
+- **Original foundation:** programme JSON, approved-account guidance, review queue, policy scripts and lab workflow.
+- **Sprint 1:** SQLite persistence, programme/assets CRUD, dashboard, Daily Brief, findings, evidence, reports, settings and audit history.
+- **Sprint 2:** safe HexiStrike assistance, enhanced charts and health metrics, global search, complete workflow UI, responsive Streamlit components and automated tests.
+
+See [CHANGELOG.md](CHANGELOG.md) for the file-level release summary.
 
 ## Roadmap
 
-### Sprint 3
+The proposed Sprint 3 covers authentication and roles, encrypted deployment configuration, read-only programme imports, protected evidence files, backups, user-defined report templates, accessibility and operational hardening. See [docs/SPRINT_3_ROADMAP.md](docs/SPRINT_3_ROADMAP.md).
 
-- HackerOne / Bugcrowd API integration (read-only programme sync)
-- Jira and Slack notification hooks
-- Screenshot viewer embedded in Evidence page
-- PDF report export
-- Researcher notes with rich markdown editor
-- Programme statistics and trends over time
-- Import findings from Nuclei JSON output
-- Two-factor confirmation for sensitive operations
-- Dark/light theme switcher
-- Docker deployment support
+## Safety and legal notice
 
----
-
-## Sprint History
-
-| Sprint | Focus | Status |
-|---|---|---|
-| Sprint 1 | Database, Programme Manager, Findings, Evidence, Reports, Settings, Activity | ✅ Complete |
-| Sprint 2 | HexiStrike, Dashboard improvements, Global Search, Workflow, UI Polish | ✅ Complete |
-| Sprint 3 | API integrations, PDF export, Nuclei import, Docker | 🗓 Planned |
-
----
-
-## Security Notice
-
-ScopeGuard AI is a **workflow and analysis tool only**.
-
-- It never autonomously performs offensive testing
-- It never executes exploits or sends attack payloads
-- All actions require explicit human review and approval
-- Only test systems and assets you are explicitly authorised to test
-- Never store credentials, session cookies or API tokens in the application
-
----
-
-## Licence
-
-MIT
+This software is a workflow aid, not authorisation and not legal advice. Programme terms can change. The researcher is responsible for confirming scope, permitted methods, accounts, rate limits, data-handling rules and disclosure requirements before acting. Stop if unexpected personal data, secrets, an authentication boundary or an out-of-scope redirect is encountered.
