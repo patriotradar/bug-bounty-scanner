@@ -1,0 +1,40 @@
+{
+  "mode": "lab-only",
+  "maximum_runtime_seconds": 120,
+  "maximum_requests": 10,
+  "allowed_severities": [
+    "medium",
+    "high"
+  ],
+  "allowed_verification_types": [
+    "repeat-nuclei-match",
+    "http-response-confirmation",
+    "version-confirmation",
+    "public-file-confirmation",
+    "missing-security-control-confirmation"
+  ],
+  "blocked_actions": [
+    "brute-force",
+    "credential-stuffing",
+    "denial-of-service",
+    "data-deletion",
+    "data-modification",
+    "file-upload",
+    "shell-command",
+    "reverse-shell",
+    "persistence",
+    "privilege-escalation",
+    "credential-dumping",
+    "database-dumping",
+    "lateral-movement",
+    "automatic-exploit-selection"
+  ],
+  "stop_conditions": [
+    "one reproducible confirmation obtained",
+    "unexpected personal data returned",
+    "target redirects outside allowlist",
+    "authentication boundary encountered",
+    "request limit reached",
+    "runtime limit reached"
+  ]
+}
