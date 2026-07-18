@@ -83,16 +83,81 @@ st.info(
 )
 
 st.divider()
-st.subheader("Workflow")
+st.subheader("Active research account")
+
+if enabled_accounts:
+    selected_account = st.selectbox(
+        "Choose the account to use",
+        options=enabled_accounts,
+        format_func=lambda account: (
+            f"{account.get('label', 'Unnamed account')} "
+            f"({account.get('email', 'Missing email')})"
+        ),
+    )
+
+    selected_email = selected_account.get("email", "Missing email")
+    selected_id = selected_account.get("id", "missing-id")
+
+    st.success(f"Current account: {selected_email}")
+    st.caption(f"Active account ID: {selected_id}")
+
+    if selected_email.endswith("@example.com"):
+        st.warning(
+            "This still uses a placeholder email. Update "
+            "config/approved-accounts.json with your real researcher account."
+        )
+else:
+    selected_account = None
+    st.warning(
+        "No enabled accounts are available. Enable an authorised account "
+        "in config/approved-accounts.json."
+    )
+
+st.divider()
+st.subheader("Safety check")
+
+account_confirmed = st.checkbox(
+    "I confirm that the selected account belongs to me and is authorised "
+    "for this programme."
+)
+
+if selected_account and account_confirmed:
+    st.success("Account safety check passed.")
+elif selected_account:
+    st.warning(
+        "Confirm account ownership before authenticated testing controls "
+        "are enabled."
+    )
+
+st.divider()
+st.subheader("Current workflow")
 
 st.markdown(
     """
     1. Confirm the programme rules and authorised scope.
-    2. Add only your researcher accounts.
-    3. Select an approved account.
-    4. Run permitted checks.
-    5. Review findings manually.
-    6. Save minimal evidence.
-    7. Generate a report.
+    2. Add only researcher accounts you created and control.
+    3. Select the approved account to use.
+    4. Confirm that the account is authorised for the programme.
+    5. Run only permitted checks against in-scope targets.
+    6. Review findings manually.
+    7. Save the smallest necessary evidence.
+    8. Generate a report.
     """
+)
+
+st.subheader("Authenticated testing status")
+
+if not selected_account:
+    st.error("Blocked: no approved research account is enabled.")
+elif not account_confirmed:
+    st.error("Blocked: account ownership has not been confirmed.")
+else:
+    st.success(
+        "Ready for the next stage. Authenticated controls may use only "
+        f"{selected_account.get('email')}."
+    )
+
+st.info(
+    "The dashboard does not currently log in to any website or store "
+    "credentials. Secure credential handling will be added separately."
 )
