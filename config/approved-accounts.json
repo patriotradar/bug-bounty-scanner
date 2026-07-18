@@ -1,0 +1,16 @@
+{
+  "accounts": [
+    {
+      "id": "primary",
+      "label": "Primary researcher account",
+      "email": "jamiemahon22@icloud.com",
+      "enabled": true
+    },
+    {
+      "id": "secondary",
+      "label": "Secondary researcher account",
+      "email": "replace-with-your-second-test-account@example.com",
+      "enabled": false
+    }
+  ]
+}
