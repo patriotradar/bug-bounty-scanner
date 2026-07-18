@@ -1,0 +1,52 @@
+{
+  "strategy": "quality-over-volume",
+
+  "severity_priority": [
+    "high",
+    "medium",
+    "low",
+    "informational"
+  ],
+
+  "low_severity_rules": {
+    "allow_review": true,
+    "require_clear_security_impact": true,
+    "require_programme_eligibility": true,
+    "require_unique_reproduction": true,
+    "reject_if_best_practice_only": true,
+    "reject_if_no_user_impact": true,
+    "reject_if_likely_duplicate": true
+  },
+
+  "informational_rules": {
+    "allow_review": false,
+    "exceptions": [
+      "directly enables a higher-impact issue",
+      "programme explicitly rewards the issue class"
+    ]
+  },
+
+  "scoring": {
+    "security_impact": 35,
+    "programme_payout_eligibility": 25,
+    "confidence": 20,
+    "duplicate_risk": -15,
+    "best_practice_only": -25,
+    "requires_unsafe_testing": -50
+  },
+
+  "queue_thresholds": {
+    "auto_reject_below": 20,
+    "manual_review_from": 20,
+    "high_priority_from": 60
+  },
+
+  "required_output": {
+    "estimated_severity": true,
+    "reportable": true,
+    "reason": true,
+    "duplicate_risk": true,
+    "programme_eligible": true,
+    "recommended_next_action": true
+  }
+}
