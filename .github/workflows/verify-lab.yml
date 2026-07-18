@@ -1,0 +1,54 @@
+name: Prepare Lab Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: "The GitHub Actions run ID containing the Nuclei results"
+        required: true
+        type: string
+
+jobs:
+  prepare-verification:
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      contents: read
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Download Nuclei results
+        uses: actions/download-artifact@v4
+        with:
+          name: nuclei-medium-high-results
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: downloaded-results
+
+      - name: Prepare one finding
+        run: |
+          mkdir -p verification
+
+          python3 scripts/prepare_verification.py \
+            --results downloaded-results/nuclei-results.jsonl \
+            --output verification/finding.json
+
+      - name: Show selected finding
+        run: |
+          echo "Selected finding:"
+          cat verification/finding.json
+
+      - name: Check verification policy
+        run: |
+          python3 scripts/verify_policy.py \
+            --finding verification/finding.json
+
+      - name: Save proposed verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: proposed-verification
+          path: verification/
+          retention-days: 7
