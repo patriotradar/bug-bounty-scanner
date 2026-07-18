@@ -3,14 +3,20 @@
     {
       "id": "primary",
       "label": "Primary researcher account",
-      "email": "jamiemahon22@icloud.com",
-      "enabled": true
+      "email": "replace-with-your-first-test-account@example.com",
+      "enabled": true,
+      "approved_programmes": [
+        "trip"
+      ]
     },
     {
       "id": "secondary",
       "label": "Secondary researcher account",
       "email": "replace-with-your-second-test-account@example.com",
-      "enabled": false
+      "enabled": false,
+      "approved_programmes": [
+        "trip"
+      ]
     }
   ]
 }
