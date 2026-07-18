@@ -1,4 +1,4 @@
-name: Medium and High Nuclei Scan
+name: Focused Medium and High Nuclei Scan
 
 on:
   workflow_dispatch:
@@ -6,14 +6,14 @@ on:
 jobs:
   nuclei-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
 
     permissions:
       contents: read
 
     steps:
       - name: Download repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check targets file
         run: |
@@ -23,18 +23,36 @@ jobs:
             exit 1
           fi
 
-          echo "Targets being scanned:"
-          cat targets.txt
+          if [ ! -s targets.txt ]; then
+            echo "ERROR: targets.txt is empty."
+            exit 1
+          fi
+
+          echo "Targets loaded:"
+          grep -vE '^[[:space:]]*(#|$)' targets.txt
+
+          echo ""
+          echo "Number of targets:"
+          grep -vE '^[[:space:]]*(#|$)' targets.txt | wc -l
 
       - name: Install Nuclei
         run: |
-          curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest \
-          | grep "browser_download_url.*linux_amd64.zip" \
-          | cut -d '"' -f 4 \
-          | wget -qi -
+          DOWNLOAD_URL=$(curl -s \
+            https://api.github.com/repos/projectdiscovery/nuclei/releases/latest \
+            | grep "browser_download_url" \
+            | grep "linux_amd64.zip" \
+            | cut -d '"' -f 4 \
+            | head -n 1)
 
-          unzip -o nuclei_*_linux_amd64.zip
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "ERROR: Could not find the latest Nuclei download."
+            exit 1
+          fi
+
+          wget -q "$DOWNLOAD_URL" -O nuclei.zip
+          unzip -o nuclei.zip
           sudo mv nuclei /usr/local/bin/nuclei
+          sudo chmod +x /usr/local/bin/nuclei
 
           nuclei -version
 
@@ -42,26 +60,30 @@ jobs:
         run: |
           nuclei -update-templates
 
-      - name: Run medium and high scan
+      - name: Run focused medium and high scan
         continue-on-error: true
         run: |
           mkdir -p scan-results
+          touch scan-results/nuclei-results.jsonl
+
+          echo "Starting focused medium and high severity scan..."
 
           nuclei \
             -list targets.txt \
             -severity medium,high \
-            -exclude-tags dos,fuzz,bruteforce,credential-stuffing,token-spray \
+            -tags cve,exposure,misconfig,default-login,tech \
+            -exclude-tags dos,fuzz,bruteforce,credential-stuffing,token-spray,intrusive \
             -rate-limit 10 \
             -concurrency 5 \
             -bulk-size 3 \
             -timeout 8 \
             -retries 0 \
-            -max-host-error 20 \
+            -max-host-error 50 \
             -jsonl-export scan-results/nuclei-results.jsonl \
             -markdown-export scan-results/markdown \
             -stats
 
-      - name: Create empty results file if nothing was found
+      - name: Create scan summary
         if: always()
         run: |
           mkdir -p scan-results
@@ -70,14 +92,39 @@ jobs:
             touch scan-results/nuclei-results.jsonl
           fi
 
-          echo "Scan completed."
-          echo "Number of findings:"
-          wc -l scan-results/nuclei-results.jsonl
+          FINDINGS=$(wc -l < scan-results/nuclei-results.jsonl)
+          TARGETS=$(grep -vE '^[[:space:]]*(#|$)' targets.txt | wc -l)
+
+          {
+            echo "# Nuclei Scan Summary"
+            echo ""
+            echo "- Targets scanned: $TARGETS"
+            echo "- Findings detected: $FINDINGS"
+            echo "- Severities requested: medium and high"
+            echo "- Maximum request rate: 10 requests per second"
+            echo "- Intrusive, denial-of-service, fuzzing and brute-force templates excluded"
+            echo ""
+          } > scan-results/scan-summary.md
+
+          if [ "$FINDINGS" -eq 0 ]; then
+            {
+              echo "No matching medium or high severity findings were detected."
+              echo ""
+              echo "This does not prove that the target has no vulnerabilities."
+            } >> scan-results/scan-summary.md
+          else
+            echo "Review nuclei-results.jsonl and the markdown folder." \
+              >> scan-results/scan-summary.md
+          fi
+
+          cat scan-results/scan-summary.md
 
       - name: Upload scan results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nuclei-medium-high-results
           path: scan-results/
           retention-days: 14
+          if-no-files-found: warn
+          compression-level: 6
