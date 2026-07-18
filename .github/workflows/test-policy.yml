@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-policy:
+  allow-approved-lab:
     runs-on: ubuntu-latest
 
     permissions:
@@ -14,7 +14,28 @@ jobs:
       - name: Download repository
         uses: actions/checkout@v4
 
-      - name: Run policy checker
+      - name: Confirm approved lab is allowed
         run: |
           python3 scripts/verify_policy.py \
             --finding tests/sample-finding.json
+
+  block-unapproved-target:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Confirm unapproved target is blocked
+        run: |
+          if python3 scripts/verify_policy.py \
+            --finding tests/blocked-finding.json
+          then
+            echo "FAILED: unapproved target was incorrectly allowed"
+            exit 1
+          else
+            echo "PASSED: unapproved target was correctly blocked"
+          fi
