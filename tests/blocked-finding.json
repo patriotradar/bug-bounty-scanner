@@ -1,0 +1,11 @@
+{
+  "template-id": "blocked-target-test",
+  "matched-at": "https://example.com/test",
+  "host": "https://example.com",
+  "type": "http",
+  "info": {
+    "name": "Blocked Target Test",
+    "severity": "medium",
+    "description": "This should be rejected because the host is not in the lab allowlist."
+  }
+}
