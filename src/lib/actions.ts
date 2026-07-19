@@ -98,12 +98,49 @@ export async function deleteEvidence(form: FormData) {
   await log("evidence_deleted", "evidence", id, "Evidence deleted"); refresh("/evidence", "/analysis", "/reports");
 }
 
+const IMPACT_BY_SEVERITY: Record<string, string> = {
+  critical: "This is a critical-severity issue. An attacker could use it to fully compromise the affected system or access highly sensitive data, so it should be reported and fixed as a priority.",
+  high: "This is a high-severity issue. An attacker could use the exposed information or weakness to access sensitive data or move further into the system, which is well worth reporting.",
+  medium: "This is a medium-severity issue. It gives an attacker useful information or limited access that can support a larger attack, so it should be addressed.",
+  low: "This is a low-severity issue. The direct impact is limited, but it still widens the attack surface and is worth tidying up.",
+  informational: "This is informational. It is not a vulnerability on its own, but it is useful context that can support a stronger finding.",
+};
+
+// Draft a full, submission-ready report from the finding and its evidence.
+function buildReportDraft(finding: { title?: string; description?: string; notes?: string; severity?: string } | null,
+                          evidence: { notes?: string; url?: string; screenshot_metadata?: string }[]) {
+  const severity = (finding?.severity || "medium").toLowerCase();
+  // Recover the URL the scanner flagged, from the evidence caption or the finding description.
+  let target = "";
+  for (const e of evidence) {
+    const m = (e.screenshot_metadata || "").match(/https?:\/\/\S+/);
+    if (m) { target = m[0]; break; }
+  }
+  if (!target) { const m = (finding?.description || "").match(/https?:\/\/\S+/); if (m) target = m[0].replace(/[.)]+$/, ""); }
+  const where = target || "the affected URL";
+
+  const summary = (finding?.description || finding?.title || "").split("\n")[0]
+    || "A security issue was identified on an in-scope asset.";
+  const steps = [
+    `1. Open the following URL in a normal browser (a simple GET request, no special tools needed):`,
+    `   ${where}`,
+    `2. Observe that the response is returned publicly, without any login or authorisation.`,
+    `3. The attached screenshot shows exactly what the server returned.`,
+  ].join("\n");
+  const expected = `Requesting ${where} should not expose sensitive information. It should require authentication or return a 403 Forbidden / 404 Not Found response.`;
+  const actual = `${where} is publicly accessible and returns sensitive information with no authentication required, as shown in the evidence.`;
+  const impact = IMPACT_BY_SEVERITY[severity] || IMPACT_BY_SEVERITY.medium;
+  const remediation = `Remove the exposed resource from public access, or require authentication for it. After fixing, re-request ${where} and confirm it no longer returns sensitive data (expect a 403 or 404).`;
+  return { summary, steps, expected, actual, impact, remediation };
+}
+
 export async function createReport(form: FormData) {
   const { supabase, user } = await context(); const findingId = text(form, "finding_id");
   const { data: finding } = await supabase.from("findings").select("*").eq("id", findingId).single();
-  const { data: evidence } = await supabase.from("evidence").select("notes,url").eq("finding_id", findingId);
-  const evidenceText = (evidence || []).map((item, index) => `${index + 1}. ${item.notes || item.url || "Evidence item"}`).join("\n");
-  const { data, error } = await supabase.from("reports").insert({ user_id: user.id, finding_id: findingId, title: finding?.title || "Finding report", summary: finding?.description || "", steps: "Add the exact minimal steps you performed within the authorised scope.", expected_behaviour: "Describe the intended secure behaviour.", actual_behaviour: finding?.notes || "Describe the observed behaviour.", impact: `Explain the practical impact supporting the ${(finding?.severity || "selected").toLowerCase()} severity.`, evidence_text: evidenceText, suggested_remediation: "Describe a proportionate remediation and validation step.", status: "Draft" }).select("id").single();
+  const { data: evidence } = await supabase.from("evidence").select("notes,url,screenshot_metadata").eq("finding_id", findingId);
+  const evidenceText = (evidence || []).map((item, index) => `${index + 1}. ${item.screenshot_metadata || item.notes || "Evidence item"}${item.url ? `\n   ${item.url}` : ""}`).join("\n") || "See the evidence attached to this finding.";
+  const draft = buildReportDraft(finding, evidence || []);
+  const { data, error } = await supabase.from("reports").insert({ user_id: user.id, finding_id: findingId, title: finding?.title || "Finding report", summary: draft.summary, steps: draft.steps, expected_behaviour: draft.expected, actual_behaviour: draft.actual, impact: draft.impact, evidence_text: evidenceText, suggested_remediation: draft.remediation, status: "Draft" }).select("id").single();
   if (error) throw new Error(error.message);
   await log("report_generated", "report", data.id, `Report generated: ${finding?.title || "Finding"}`); refresh("/reports", "/dashboard", "/brief");
 }
