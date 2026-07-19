@@ -60,14 +60,14 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <summary className="tutorial-summary">
             <span className="tutorial-summary-icon">?</span>
             How to use ScopeGuard AI
-            <span className="tutorial-caret" aria-hidden>▾</span>
+            <span className="tutorial-caret" aria-hidden="true">▾</span>
           </summary>
           <div className="tutorial-body">
             <p className="tutorial-intro">New here? Follow these six steps to go from zero to a polished bug-bounty report.</p>
             <ol className="tutorial-steps">
               {tutorialSteps.map((step) => (
                 <li key={step.title} className="tutorial-step">
-                  <span className="tutorial-step-icon" aria-hidden>{step.icon}</span>
+                  <span className="tutorial-step-icon" aria-hidden="true">{step.icon}</span>
                   <div>
                     <strong className="tutorial-step-title">{step.title}</strong>
                     <p className="tutorial-step-body">{step.body}</p>
