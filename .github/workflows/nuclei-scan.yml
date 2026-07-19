@@ -1,4 +1,4 @@
-name: Focused Medium and High Nuclei Scan
+name: Focused Nuclei Scan (low, medium, high, critical)
 
 on:
   workflow_dispatch:
@@ -66,11 +66,11 @@ jobs:
           mkdir -p scan-results
           touch scan-results/nuclei-results.jsonl
 
-          echo "Starting focused medium and high severity scan..."
+          echo "Starting focused low, medium, high and critical severity scan..."
 
           nuclei \
             -list targets.txt \
-            -severity medium,high \
+            -severity low,medium,high,critical \
             -tags cve,exposure,misconfig,default-login,tech \
             -exclude-tags dos,fuzz,bruteforce,credential-stuffing,token-spray,intrusive \
             -rate-limit 10 \
@@ -100,7 +100,7 @@ jobs:
             echo ""
             echo "- Targets scanned: $TARGETS"
             echo "- Findings detected: $FINDINGS"
-            echo "- Severities requested: medium and high"
+            echo "- Severities requested: low, medium, high and critical"
             echo "- Maximum request rate: 10 requests per second"
             echo "- Intrusive, denial-of-service, fuzzing and brute-force templates excluded"
             echo ""

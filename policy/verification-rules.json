@@ -3,8 +3,10 @@
   "maximum_runtime_seconds": 120,
   "maximum_requests": 10,
   "allowed_severities": [
+    "low",
     "medium",
-    "high"
+    "high",
+    "critical"
   ],
   "allowed_verification_types": [
     "repeat-nuclei-match",
