@@ -21,6 +21,10 @@ export async function signup(formData: FormData) {
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
   // When email confirmation is disabled, sign-up returns an active session, so log straight in.
   if (data.session) redirect("/dashboard");
+  // Auto-confirm can leave the new account active without a session. Sign in directly so the
+  // user lands in the app instead of waiting for an email that will never arrive.
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (!signInError) redirect("/dashboard");
   redirect("/login?message=Check your email to confirm your ScopeGuard account.");
 }
 
