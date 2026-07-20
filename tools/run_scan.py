@@ -34,6 +34,11 @@ import requests
 HERE = os.path.dirname(os.path.abspath(__file__))
 SEV_ORDER = ["critical", "high", "medium", "low", "info", "informational", "unknown"]
 EXCLUDE_TAGS = ["dos", "fuzz", "fuzzing", "bruteforce", "intrusive"]
+# High-signal, non-intrusive template groups for a first-pass bug-bounty scan:
+# exposed files/configs/secrets, misconfigurations, open panels and default logins.
+# Keeps runs fast and focused instead of firing the entire template set (e.g. every CVE).
+DEFAULT_TAGS = ("exposure,exposures,config,files,env,git,svn,backup,logs,secret,"
+                "misconfig,misconfiguration,exposed-panel,exposed-panels,default-login,takeover")
 
 
 def api(base, key):
@@ -66,15 +71,17 @@ def host_of(t):
     return urlparse(u).netloc or t
 
 
-def run_nuclei(nuclei, target, out_path, user_agent, rate_limit):
+def run_nuclei(nuclei, target, out_path, user_agent, rate_limit, tags):
     cmd = [nuclei, "-u", target, "-jsonl", "-o", out_path, "-silent",
            "-severity", "low,medium,high,critical",
            "-etags", ",".join(EXCLUDE_TAGS),
            "-rate-limit", str(rate_limit), "-timeout", "10", "-retries", "1",
            "-disable-update-check", "-no-interactsh"]
+    if tags:
+        cmd += ["-tags", tags]
     if user_agent:
         cmd += ["-H", f"User-Agent: {user_agent}"]
-    subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    subprocess.run(cmd, capture_output=True, text=True, timeout=1200)
 
 
 def load_jsonl(path):
@@ -115,6 +122,8 @@ def main():
     p.add_argument("--user-agent", default="")
     p.add_argument("--rate-limit", type=int, default=5)
     p.add_argument("--mode", default="scan", choices=["scan", "monitor"])
+    p.add_argument("--tags", default=DEFAULT_TAGS,
+                   help="nuclei template tags to include (default: high-signal groups). Pass '' for all templates.")
     args = p.parse_args()
 
     if args.targets.startswith("@"):
@@ -141,7 +150,7 @@ def main():
               "Running the vulnerability templates against this target…", state="active")
         out = tempfile.NamedTemporaryFile(delete=False, suffix=".jsonl").name
         try:
-            run_nuclei(args.nuclei, target, out, args.user_agent, args.rate_limit)
+            run_nuclei(args.nuclei, target, out, args.user_agent, args.rate_limit, args.tags)
         except subprocess.TimeoutExpired:
             pass
         items = load_jsonl(out)
@@ -179,7 +188,8 @@ def main():
         subprocess.run(["python3", os.path.join(HERE, "capture_evidence.py"),
                         "--results", combined, "--user-id", args.user_id,
                         "--programme-id", args.programme_id,
-                        "--supabase-url", base, "--service-key", key],
+                        "--supabase-url", base, "--service-key", key]
+                       + (["--user-agent", args.user_agent] if args.user_agent else []),
                        capture_output=True, text=True)
         event(base, key, run_id, args.user_id, step, "Captured screenshot proof",
               "Screenshots are attached to each finding as evidence.")
