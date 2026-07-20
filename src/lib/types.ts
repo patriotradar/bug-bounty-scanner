@@ -30,6 +30,12 @@ export type Report = {
   created_at: string; updated_at: string;
 };
 
+export type KnownIssue = {
+  id: string; user_id: string; programme_id: string;
+  match_type: "template" | "keyword"; pattern: string; note: string; created_at: string;
+};
+
+export const knownMatchTypes = ["keyword", "template"];
 export const severities = ["Critical", "High", "Medium", "Low", "Informational"];
 export const statuses = ["New", "Investigating", "Needs Evidence", "Verified", "Ready to Report", "Submitted", "Closed"];
 export const assetTypes = ["Domain", "Wildcard", "API", "Mobile", "Other"];

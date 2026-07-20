@@ -64,6 +64,26 @@ export async function deleteAsset(form: FormData) {
   await log("asset_deleted", "asset", id, "Asset removed"); refresh("/programmes", "/findings");
 }
 
+export async function createKnownIssue(form: FormData) {
+  const { supabase, user } = await context();
+  const programmeId = text(form, "programme_id"); const pattern = text(form, "pattern");
+  if (!programmeId || !pattern) return;
+  const matchType = text(form, "match_type") === "template" ? "template" : "keyword";
+  const { data, error } = await supabase.from("known_issues").insert({
+    user_id: user.id, programme_id: programmeId, match_type: matchType, pattern, note: text(form, "note"),
+  }).select("id").single();
+  if (error) throw new Error(error.message);
+  await log("known_issue_created", "known_issue", data.id, `Known issue added (${matchType}): ${pattern}`);
+  refresh("/programmes");
+}
+
+export async function deleteKnownIssue(form: FormData) {
+  const { supabase } = await context(); const id = text(form, "id");
+  const { error } = await supabase.from("known_issues").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  await log("known_issue_deleted", "known_issue", id, "Known issue removed"); refresh("/programmes");
+}
+
 export async function createFinding(form: FormData) {
   const { supabase, user } = await context(); const title = text(form, "title");
   if (!title || !text(form, "programme_id")) return;
