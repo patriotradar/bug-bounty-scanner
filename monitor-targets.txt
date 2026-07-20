@@ -1,0 +1,4 @@
+# Monitored targets - ONLY add sites you are authorised to scan automatically.
+# These two are public deliberately-vulnerable test sites that allow scanner testing.
+https://brokencrystals.com
+https://ginandjuice.shop

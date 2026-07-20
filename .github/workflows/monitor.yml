@@ -1,0 +1,70 @@
+name: Scheduled monitoring (re-check in-scope sites for new findings)
+
+# Re-checks the configured targets on a schedule and records only findings that
+# are NEW since the last run, so you are early to a change without duplicate noise.
+#
+# IMPORTANT: only add targets from programmes whose rules ALLOW automated scanning,
+# and only assets that are in scope. Safe-harbour does not by itself permit scanning.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 6 * * 1"   # weekly, Mondays 06:00 UTC (change or add days as needed)
+
+concurrency:
+  group: monitor
+  cancel-in-progress: true
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install nuclei
+        run: |
+          URL=$(curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest \
+            | grep browser_download_url | grep linux_amd64.zip | cut -d '"' -f 4 | head -1)
+          wget -q "$URL" -O nuclei.zip && unzip -o -q nuclei.zip
+          sudo mv nuclei /usr/local/bin/nuclei && nuclei -version
+
+      - name: Install Python deps and browser
+        run: |
+          pip install requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Update templates
+        run: nuclei -update-templates || true
+
+      - name: Scan configured targets
+        continue-on-error: true
+        run: |
+          mkdir -p scan
+          nuclei -list monitor-targets.txt \
+            -severity low,medium,high,critical \
+            -tags cve,exposure,misconfig,default-login,tech \
+            -exclude-tags dos,fuzz,bruteforce,credential-stuffing,token-spray,intrusive \
+            -rate-limit 10 -concurrency 5 -timeout 8 -retries 0 -max-host-error 50 \
+            -jsonl-export scan/results.jsonl -stats || true
+          touch scan/results.jsonl
+
+      - name: Record only NEW findings
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          MONITOR_USER_ID: ${{ secrets.MONITOR_USER_ID }}
+          MONITOR_PROGRAMME_ID: ${{ secrets.MONITOR_PROGRAMME_ID }}
+        run: |
+          python tools/monitor.py \
+            --results scan/results.jsonl \
+            --user-id "$MONITOR_USER_ID" \
+            --programme-id "$MONITOR_PROGRAMME_ID" \
+            --supabase-url "$SUPABASE_URL" \
+            --service-key "$SUPABASE_SERVICE_KEY"
