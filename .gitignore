@@ -29,3 +29,6 @@ data/*.db
 # OS / editor
 .DS_Store
 *.log
+
+# Vercel local link
+/.vercel

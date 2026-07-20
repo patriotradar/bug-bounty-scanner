@@ -55,7 +55,7 @@ On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`.
 ## Run Streamlit
 
 ```bash
-python -m streamlit run app/dashboard.py
+python -m streamlit run streamlit/dashboard.py
 ```
 
 Open the local URL printed by Streamlit. The sidebar connects the Dashboard, Review Queue, Daily Brief, Programmes, Findings, Evidence, Reports, Analysis, Global Search and Settings pages.

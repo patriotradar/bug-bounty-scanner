@@ -2,11 +2,11 @@ import Link from "next/link";
 import { logout } from "@/lib/auth-actions";
 
 const navigation = [
-  ["Dashboard", "/dashboard", "⌂"], ["Daily brief", "/brief", "☀"],
+  ["Dashboard", "/dashboard", "⌂"], ["Live scan", "/activity", "◉"],
   ["Programmes", "/programmes", "▣"], ["Findings", "/findings", "⌕"],
-  ["Evidence", "/evidence", "⌁"], ["Reports", "/reports", "▤"],
-  ["Analysis", "/analysis", "✦"], ["Search", "/search", "⌕"],
-  ["Settings", "/settings", "⚙"],
+  ["Daily brief", "/brief", "☀"], ["Evidence", "/evidence", "⌁"],
+  ["Reports", "/reports", "▤"], ["Analysis", "/analysis", "✦"],
+  ["Search", "/search", "⌕"], ["Settings", "/settings", "⚙"],
 ];
 
 export function AppShell({ children, email }: { children: React.ReactNode; email?: string }) {
