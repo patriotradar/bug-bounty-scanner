@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0d0c0e" />
+<title>AURA NAILS — Structural Manicure Atelier</title>
+<meta name="description" content="AURA NAILS — an ultra-luxury nail atelier sculpting high-fashion extensions, avant-garde nail art and Japanese-style naked manicure rituals for the modern hand." />
+
+<!-- ============================================================
+     TYPOGRAPHY — Cormorant Garamond (editorial serif)
+                   Montserrat (geometric sans for micro-copy)
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet" />
+
+<!-- ============================================================
+     THREE.JS r128 — classic build, exposes the global `THREE`
+     ============================================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+/* ================================================================
+   1. DESIGN TOKENS
+   ================================================================ */
+:root{
+  --obsidian:      #0d0c0e;   /* deep dark-mode backdrop            */
+  --obsidian-soft: #141216;   /* lifted panel tone                  */
+  --linen:         #f5ebe6;   /* soft ivory white                   */
+  --linen-dim:     rgba(245, 235, 230, 0.60);
+  --linen-faint:   rgba(245, 235, 230, 0.34);
+  --champagne:     #d4af37;   /* signature gold                     */
+  --champagne-lt:  #efd9a2;   /* warm highlight                     */
+  --rose-gold:     #e8b4a6;   /* delicate accent                    */
+
+  --serif: 'Cormorant Garamond', 'Times New Roman', serif;
+  --sans:  'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Fluid rhythm — one gutter value used everywhere for alignment */
+  --gutter: clamp(1.5rem, 5vw, 6rem);
+  --ease:   cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ================================================================
+   2. RESET / BASE
+   ================================================================ */
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+
+html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
+
+body{
+  min-height:100vh;
+  background:var(--obsidian);
+  color:var(--linen);
+  font-family:var(--sans);
+  font-weight:300;
+  overflow-x:hidden;
+  /* CSS-only fallback glow, visible if WebGL is unavailable */
+  background-image:
+    radial-gradient(60vw 60vw at 78% 42%, rgba(212,175,55,0.10), transparent 62%),
+    radial-gradient(40vw 40vw at 88% 68%, rgba(232,180,166,0.07), transparent 65%);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+a{ color:inherit; text-decoration:none; }
+button{ font:inherit; color:inherit; background:none; border:none; cursor:pointer; }
+
+::selection{ background:rgba(212,175,55,0.28); color:var(--linen); }
+
+/* ================================================================
+   3. LAYER STACK
+      z1 canvas · z2 scrim/vignette · z3 grain · z4 UI
+   ================================================================ */
+
+/* --- 3.1 The WebGL stage: fixed, full-bleed, behind everything --- */
+#lacquer-canvas{
+  position:fixed;
+  top:0; left:0;
+  width:100%;
+  height:100%;
+  z-index:1;
+  display:block;
+  pointer-events:none;   /* the whole window drives the parallax   */
+}
+
+/* --- 3.2 Scrim: keeps editorial text legible over the 3D form --- */
+.scrim{
+  position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:
+    /* top band — guarantees the navigation reads over the sculpture */
+    linear-gradient(to bottom, rgba(13,12,14,0.88) 0%, rgba(13,12,14,0.42) 5.5%, rgba(13,12,14,0) 13%),
+    /* left-hand reading gradient */
+    linear-gradient(100deg, rgba(13,12,14,0.94) 0%, rgba(13,12,14,0.74) 34%, rgba(13,12,14,0.10) 62%, rgba(13,12,14,0) 78%),
+    /* bottom anchor for the services tray */
+    linear-gradient(to top, rgba(13,12,14,0.92) 0%, rgba(13,12,14,0.30) 26%, rgba(13,12,14,0) 48%),
+    /* cinematic vignette */
+    radial-gradient(120% 90% at 50% 50%, rgba(13,12,14,0) 45%, rgba(13,12,14,0.72) 100%);
+}
+
+/* --- 3.3 Grain: inline SVG turbulence, no external asset ------- */
+.grain{
+  position:fixed; inset:-50%; z-index:3; pointer-events:none;
+  opacity:0.24;
+  mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  animation:grain-drift 7s steps(6) infinite;
+}
+@keyframes grain-drift{
+  0%,100%{ transform:translate(0,0); }
+  20%{ transform:translate(-2%,1.5%); }
+  40%{ transform:translate(1.5%,-1%); }
+  60%{ transform:translate(-1%,-2%); }
+  80%{ transform:translate(2%,1%); }
+}
+
+/* --- 3.4 UI layer: sits above the canvas; clicks pass through --
+        except on genuinely interactive elements.                 */
+.ui{
+  position:relative;
+  z-index:4;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  min-height:100svh;
+  pointer-events:none;
+}
+.ui a,
+.ui button{ pointer-events:auto; }
+
+/* ================================================================
+   4. HEADER / NAVIGATION
+   ================================================================ */
+.nav{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:2rem;
+  padding:clamp(1.4rem,3vw,2.4rem) var(--gutter);
+}
+
+.brand{
+  font-family:var(--sans);
+  font-weight:400;
+  font-size:0.86rem;
+  letter-spacing:0.46em;
+  text-transform:uppercase;
+  color:var(--linen);
+  white-space:nowrap;
+}
+.brand span{ color:var(--champagne); }
+
+.nav-links{
+  display:flex;
+  align-items:center;
+  gap:clamp(1.5rem,3vw,3rem);
+  list-style:none;
+}
+.nav-links a{
+  position:relative;
+  font-size:0.68rem;
+  font-weight:300;
+  letter-spacing:0.24em;
+  text-transform:uppercase;
+  color:var(--linen-dim);
+  transition:color 0.5s var(--ease);
+}
+/* hairline underline that draws in from the left */
+.nav-links a::after{
+  content:'';
+  position:absolute;
+  left:0; bottom:-0.5rem;
+  width:100%; height:1px;
+  background:var(--champagne);
+  transform:scaleX(0);
+  transform-origin:left;
+  transition:transform 0.6s var(--ease);
+}
+.nav-links a:hover{ color:var(--linen); }
+.nav-links a:hover::after{ transform:scaleX(1); }
+
+.nav-book{
+  font-size:0.66rem;
+  letter-spacing:0.24em;
+  text-transform:uppercase;
+  color:var(--champagne-lt);
+  border:1px solid rgba(212,175,55,0.42);
+  padding:0.75rem 1.5rem;
+  border-radius:2rem;
+  transition:background 0.5s var(--ease), color 0.5s var(--ease), border-color 0.5s var(--ease);
+}
+.nav-book:hover{
+  background:var(--champagne);
+  border-color:var(--champagne);
+  color:var(--obsidian);
+}
+
+/* ================================================================
+   5. HERO
+   ================================================================ */
+.hero{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:clamp(1.5rem,5vh,4rem) var(--gutter) clamp(1.5rem,4.5vh,3.5rem);
+  max-width:min(44rem, 92vw);
+}
+
+.eyebrow{
+  display:flex;
+  align-items:flex-start;   /* keeps the rule on the first line when wrapping */
+  gap:0.9rem;
+  font-size:0.62rem;
+  font-weight:400;
+  letter-spacing:0.36em;
+  line-height:1.7;
+  text-transform:uppercase;
+  color:var(--champagne);
+  margin-bottom:clamp(1.1rem,2.6vh,2rem);
+}
+.eyebrow::before{
+  content:'';
+  flex:0 0 auto;
+  width:clamp(1.8rem,4vw,3.4rem);
+  height:1px;
+  margin-top:0.62em;        /* optically centres on the cap height */
+  background:linear-gradient(90deg, transparent, var(--champagne));
+}
+
+.headline{
+  font-family:var(--serif);
+  font-weight:300;
+  /* Sized against BOTH axes so the services tray survives short,
+     wide viewports (laptop displays) without scrolling.           */
+  font-size:clamp(2.3rem, min(6vw, 8.6vh), 4.9rem);
+  line-height:1.04;
+  letter-spacing:-0.015em;
+  color:var(--linen);
+  margin-bottom:clamp(1.1rem,2.6vh,1.8rem);
+  text-wrap:balance;
+  hyphens:none;
+}
+/* the italic clause carries the champagne → rose-gold shimmer */
+.headline em{
+  font-style:italic;
+  font-weight:400;
+  white-space:nowrap;   /* never break "high-fashion" at its hyphen */
+  background:linear-gradient(96deg, var(--champagne) 0%, #fff4e2 38%, var(--rose-gold) 72%, var(--champagne) 100%);
+  background-size:220% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+  animation:shimmer 9s ease-in-out infinite;
+}
+@keyframes shimmer{
+  0%,100%{ background-position:0% 50%; }
+  50%    { background-position:100% 50%; }
+}
+
+.philosophy{
+  max-width:46ch;
+  font-size:clamp(0.82rem,1.05vw,0.92rem);
+  font-weight:300;
+  line-height:1.9;
+  color:var(--linen-dim);
+  margin-bottom:clamp(1.6rem,3.4vh,2.6rem);
+}
+
+/* --- 5.1 Dual call-to-action ---------------------------------- */
+.cta-row{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:clamp(0.8rem,2vw,1.4rem);
+}
+
+.btn{
+  position:relative;
+  overflow:hidden;
+  display:inline-flex;
+  align-items:center;
+  gap:0.8rem;
+  padding:1.05rem 2.1rem;
+  border-radius:2.5rem;
+  font-size:0.66rem;
+  font-weight:500;
+  letter-spacing:0.26em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  transition:transform 0.6s var(--ease), box-shadow 0.6s var(--ease), border-color 0.6s var(--ease), color 0.6s var(--ease);
+}
+.btn:hover{ transform:translateY(-3px); }
+
+/* filled champagne — the primary reservation action */
+.btn-primary{
+  color:#141013;
+  background:linear-gradient(120deg, var(--champagne-lt) 0%, var(--champagne) 46%, #c79a2b 100%);
+  box-shadow:0 12px 40px -14px rgba(212,175,55,0.75);
+}
+.btn-primary:hover{ box-shadow:0 20px 52px -14px rgba(212,175,55,0.9); }
+/* travelling sheen */
+.btn-primary::after{
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(105deg, transparent 36%, rgba(255,255,255,0.62) 50%, transparent 64%);
+  transform:translateX(-130%);
+  transition:transform 0.9s var(--ease);
+}
+.btn-primary:hover::after{ transform:translateX(130%); }
+
+/* outlined ghost — the secondary, quieter action */
+.btn-ghost{
+  color:var(--linen);
+  border:1px solid rgba(245,235,230,0.22);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  background:rgba(255,255,255,0.03);
+}
+.btn-ghost:hover{
+  border-color:rgba(212,175,55,0.65);
+  color:var(--champagne-lt);
+}
+.btn-ghost .dot{
+  width:5px; height:5px; border-radius:50%;
+  background:var(--rose-gold);
+  box-shadow:0 0 10px 1px rgba(232,180,166,0.9);
+}
+
+/* ================================================================
+   6. SERVICES TRAY — glassmorphism grid pinned to the bottom
+   ================================================================ */
+.services{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:1px;                                   /* hairline seams     */
+  background:rgba(245,235,230,0.07);
+  border-top:1px solid rgba(245,235,230,0.09);
+}
+
+.service{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  padding:clamp(1.4rem,2.2vw,2.1rem) clamp(1.4rem,2.4vw,2.4rem) clamp(1.5rem,2.4vw,2.2rem);
+  /* the requested glass treatment */
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  background:rgba(255,255,255,0.03);
+  transition:background 0.7s var(--ease), transform 0.7s var(--ease);
+}
+/* champagne wash that rises on hover */
+.service::before{
+  content:'';
+  position:absolute; inset:0; z-index:-1;
+  background:linear-gradient(to top, rgba(212,175,55,0.16), rgba(212,175,55,0) 72%);
+  opacity:0;
+  transition:opacity 0.7s var(--ease);
+}
+/* top hairline that draws across on hover */
+.service::after{
+  content:'';
+  position:absolute; top:0; left:0;
+  width:100%; height:1px;
+  background:linear-gradient(90deg, var(--champagne), var(--rose-gold), transparent);
+  transform:scaleX(0);
+  transform-origin:left;
+  transition:transform 0.9s var(--ease);
+}
+.service:hover{ background:rgba(255,255,255,0.055); transform:translateY(-4px); }
+.service:hover::before{ opacity:1; }
+.service:hover::after{ transform:scaleX(1); }
+
+.service-index{
+  display:block;
+  font-family:var(--serif);
+  font-style:italic;
+  font-size:clamp(1.4rem,2.2vw,1.9rem);
+  line-height:1;
+  color:var(--champagne);
+  opacity:0.72;
+  margin-bottom:clamp(0.7rem,1.6vw,1.1rem);
+}
+.service-title{
+  font-family:var(--serif);
+  font-weight:500;
+  font-size:clamp(1.1rem,1.8vw,1.45rem);
+  line-height:1.24;
+  letter-spacing:0.005em;
+  color:var(--linen);
+  margin-bottom:0.6rem;
+}
+.service-copy{
+  font-size:0.74rem;
+  font-weight:300;
+  line-height:1.78;
+  color:var(--linen-faint);
+  max-width:34ch;
+}
+.service-link{
+  display:inline-flex;
+  align-items:center;
+  gap:0.55rem;
+  margin-top:clamp(0.9rem,1.6vw,1.2rem);
+  font-size:0.6rem;
+  font-weight:500;
+  letter-spacing:0.26em;
+  text-transform:uppercase;
+  color:var(--linen-dim);
+  transition:color 0.5s var(--ease), gap 0.5s var(--ease);
+}
+.service:hover .service-link{ color:var(--champagne-lt); gap:1rem; }
+
+/* ================================================================
+   7. ENTRANCE CHOREOGRAPHY
+      Elements lift into place once the stage is ready.
+   ================================================================ */
+[data-reveal]{
+  opacity:0;
+  transform:translateY(26px);
+  transition:opacity 1.15s var(--ease), transform 1.15s var(--ease);
+}
+body.is-ready [data-reveal]{ opacity:1; transform:none; }
+body.is-ready [data-reveal="1"]{ transition-delay:0.10s; }
+body.is-ready [data-reveal="2"]{ transition-delay:0.22s; }
+body.is-ready [data-reveal="3"]{ transition-delay:0.34s; }
+body.is-ready [data-reveal="4"]{ transition-delay:0.46s; }
+body.is-ready [data-reveal="5"]{ transition-delay:0.58s; }
+body.is-ready [data-reveal="6"]{ transition-delay:0.70s; }
+body.is-ready [data-reveal="7"]{ transition-delay:0.80s; }
+body.is-ready [data-reveal="8"]{ transition-delay:0.90s; }
+body.is-ready [data-reveal="9"]{ transition-delay:1.00s; }
+
+/* ================================================================
+   8. RESPONSIVE
+   ================================================================ */
+@media (max-width: 1024px){
+  .services{ grid-template-columns:1fr; }
+  .service-copy{ max-width:52ch; }
+  /* On narrow screens the sculpture recentres and sits behind the
+     copy, so the scrim flips to a horizontal falloff: a bright band
+     of lacquer up top, then a deep field for the editorial text.   */
+  .scrim{
+    background:
+      linear-gradient(180deg,
+        rgba(13,12,14,0.90) 0%,
+        rgba(13,12,14,0.40) 10%,
+        rgba(13,12,14,0.72) 21%,
+        rgba(13,12,14,0.88) 34%,
+        rgba(13,12,14,0.95) 100%),
+      radial-gradient(130% 80% at 50% 22%, rgba(13,12,14,0) 30%, rgba(13,12,14,0.60) 100%);
+  }
+}
+
+@media (max-width: 760px){
+  .nav-links{ display:none; }                /* keep the bar minimal */
+  .hero{ padding-top:clamp(3rem,10vh,6rem); }
+  .btn{ flex:1 1 auto; justify-content:center; }
+}
+
+/* ================================================================
+   9. ACCESSIBILITY
+   ================================================================ */
+:focus-visible{
+  outline:1px solid var(--champagne);
+  outline-offset:4px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .grain{ animation:none; }
+  .headline em{ animation:none; }
+  html{ scroll-behavior:auto; }
+  [data-reveal]{ transition-duration:0.01ms; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     THE 3D STAGE (z-index 1)
+     ============================================================ -->
+<canvas id="lacquer-canvas" aria-hidden="true"></canvas>
+
+<!-- Legibility scrim + vignette (z-index 2) -->
+<div class="scrim" aria-hidden="true"></div>
+
+<!-- Film grain (z-index 3) -->
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============================================================
+     UI OVERLAY (z-index 4)
+     ============================================================ -->
+<div class="ui">
+
+  <!-- ---------- HEADER ---------- -->
+  <header class="nav" data-reveal="1">
+    <a class="brand" href="#top">Aura<span>&nbsp;·&nbsp;</span>Nails</a>
+
+    <nav aria-label="Primary">
+      <ul class="nav-links">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#atelier">The Atelier</a></li>
+        <li><a href="#lookbook">Lookbook</a></li>
+        <li><a href="#bookings">Bookings</a></li>
+      </ul>
+    </nav>
+
+    <a class="nav-book" href="#bookings">Reserve</a>
+  </header>
+
+  <!-- ---------- HERO ---------- -->
+  <main class="hero" id="top">
+    <p class="eyebrow" data-reveal="2">Structural Manicure Atelier — Est. 2014</p>
+
+    <h1 class="headline" data-reveal="3">
+      Sculpting <em>high-fashion</em> extensions for the modern hand.
+    </h1>
+
+    <p class="philosophy" data-reveal="4">
+      We treat the nail as architecture. Every set begins with an apex measured to your
+      natural stress point and a cuticle line worked to the millimetre — so that
+      strength, proportion and shine outlive the appointment. Two chairs, one artist.
+    </p>
+
+    <div class="cta-row" data-reveal="5">
+      <a class="btn btn-primary" href="#bookings">Reserve a Chair</a>
+      <a class="btn btn-ghost" href="#atelier"><span class="dot" aria-hidden="true"></span>Private Consultation</a>
+    </div>
+  </main>
+
+  <!-- ---------- SERVICES TRAY ---------- -->
+  <section class="services" id="services" aria-label="Services">
+
+    <article class="service" data-reveal="7">
+      <span class="service-index">01.</span>
+      <h2 class="service-title">Gel-X &amp; Après Extensions</h2>
+      <p class="service-copy">
+        Bespoke length and structural architecture. Full-coverage soft-gel tips fitted
+        to the natural nail bed, apex-built for balance and finished in nine
+        proprietary shapes.
+      </p>
+      <a class="service-link" href="#bookings">Explore <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="service" data-reveal="8">
+      <span class="service-index">02.</span>
+      <h2 class="service-title">Avant-Garde Nail Art</h2>
+      <p class="service-copy">
+        Hand-painted metallic line work, mirror-chrome finishes and sculpted 3D
+        textures. Commissioned pieces developed with you in the studio, one hand at a
+        time.
+      </p>
+      <a class="service-link" href="#lookbook">View Lookbook <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="service" data-reveal="9">
+      <span class="service-index">03.</span>
+      <h2 class="service-title">Naked Manicure Rituals</h2>
+      <p class="service-copy">
+        Deep Japanese-style e-file cuticle care and natural nail restoration. A dry,
+        waterless ritual that rebuilds the plate, refines the sidewalls and leaves a
+        glass finish without colour.
+      </p>
+      <a class="service-link" href="#atelier">The Ritual <span aria-hidden="true">→</span></a>
+    </article>
+
+  </section>
+</div>
+
+<script>
+/* ==================================================================
+   AURA NAILS — WebGL lacquer sculpture
+   ------------------------------------------------------------------
+   Everything below is procedural: the environment map, the colour
+   ramp and the clearcoat normal map are all painted into offscreen
+   2D canvases at runtime. No image, model or texture is fetched.
+   ================================================================== */
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('lacquer-canvas');
+
+  /* If WebGL or the library is unavailable we simply reveal the UI —
+     the CSS gradient backdrop already carries the brand palette.     */
+  if (typeof THREE === 'undefined' || !canvas) {
+    document.body.classList.add('is-ready');
+    return;
+  }
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ================================================================
+     1. PROCEDURAL TEXTURE FACTORY
+     ================================================================ */
+
+  /**
+   * Paints a studio "lightbox" environment in an equirectangular
+   * layout: obsidian floor, warm horizon, pale ceiling, plus a sweep
+   * of iridescent bands and a handful of blurred softboxes. Reflected
+   * off a clearcoated metal this reads as holographic chrome.
+   */
+  function createEnvironmentTexture() {
+    var W = 1024, H = 512;
+    var c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    var ctx = c.getContext('2d');
+
+    /* --- 1a. Vertical studio gradient (ceiling → floor) --------- */
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0.00, '#fff6ea');   /* soft-box ceiling         */
+    sky.addColorStop(0.26, '#e7d3c3');   /* warm falloff             */
+    sky.addColorStop(0.48, '#8e7a72');   /* horizon                  */
+    sky.addColorStop(0.62, '#2a2429');   /* shadow band              */
+    sky.addColorStop(1.00, '#0a090b');   /* obsidian floor           */
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    /* --- 1b. Iridescent horizontal sweep ----------------------- */
+    var iri = ctx.createLinearGradient(0, 0, W, 0);
+    iri.addColorStop(0.00, 'rgba(212,175,55,0.55)');   /* champagne  */
+    iri.addColorStop(0.18, 'rgba(255,247,238,0.62)');  /* chrome     */
+    iri.addColorStop(0.36, 'rgba(242,201,207,0.52)');  /* pastel rose*/
+    iri.addColorStop(0.52, 'rgba(198,214,226,0.42)');  /* cool tint  */
+    iri.addColorStop(0.70, 'rgba(232,180,166,0.50)');  /* rose gold  */
+    iri.addColorStop(0.86, 'rgba(255,244,226,0.58)');  /* warm white */
+    iri.addColorStop(1.00, 'rgba(212,175,55,0.55)');   /* wrap = seamless */
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.fillStyle = iri;
+    ctx.fillRect(0, 0, W, H * 0.58);
+
+    /* --- 1c. Blurred softboxes → crisp specular glints ---------- */
+    ctx.globalCompositeOperation = 'lighter';
+    if ('filter' in ctx) ctx.filter = 'blur(26px)';
+
+    var boxes = [
+      /* x, y, w, h, rgba                                           */
+      [0.08, 0.06, 0.16, 0.24, 'rgba(255,250,240,0.95)'],
+      [0.42, 0.02, 0.10, 0.30, 'rgba(255,255,255,0.85)'],
+      [0.72, 0.10, 0.20, 0.18, 'rgba(255,236,208,0.80)'],
+      [0.30, 0.40, 0.28, 0.06, 'rgba(232,180,166,0.55)'],
+      [0.88, 0.44, 0.14, 0.05, 'rgba(212,175,55,0.60)']
+    ];
+    boxes.forEach(function (b) {
+      ctx.fillStyle = b[4];
+      ctx.fillRect(b[0] * W, b[1] * H, b[2] * W, b[3] * H);
+    });
+
+    /* A low, wide bounce card just under the horizon keeps the
+       underside of the sculpture from going fully black.           */
+    ctx.fillStyle = 'rgba(212,175,55,0.22)';
+    ctx.fillRect(0, H * 0.60, W, H * 0.10);
+
+    if ('filter' in ctx) ctx.filter = 'none';
+    ctx.globalCompositeOperation = 'source-over';
+
+    var tex = new THREE.CanvasTexture(c);
+    tex.mapping  = THREE.EquirectangularReflectionMapping;
+    tex.encoding = THREE.sRGBEncoding;
+    tex.wrapS    = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  /**
+   * A one-dimensional colour ramp used as the base `map`. Because the
+   * material is fully metallic this tints the reflections rather than
+   * painting flat colour — champagne gold → chrome → pastel pink.
+   */
+  function createLacquerRamp(stops) {
+    var W = 512, H = 8;
+    var c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    var ctx = c.getContext('2d');
+    var g = ctx.createLinearGradient(0, 0, W, 0);
+    stops.forEach(function (s) { g.addColorStop(s[0], s[1]); });
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    var tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.encoding = THREE.sRGBEncoding;
+    return tex;
+  }
+
+  /**
+   * Tiling fBm value-noise baked into a tangent-space normal map via
+   * a Sobel pass. Applied to `clearcoatNormalMap` it gives the top
+   * lacquer coat a faint liquid ripple instead of a plastic-perfect
+   * mirror.
+   */
+  function createClearcoatNormalMap(size) {
+    size = size || 256;
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var ctx = c.getContext('2d');
+    var img = ctx.createImageData(size, size);
+
+    /* Deterministic lattice hash — same input, same value.          */
+    function hash(x, y) {
+      var n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+      return n - Math.floor(n);
+    }
+    function smooth(t) { return t * t * (3 - 2 * t); }
+
+    /* Tiling value noise: lattice coords wrap at `period`.          */
+    function noise(x, y, period) {
+      var xi = Math.floor(x), yi = Math.floor(y);
+      var xf = x - xi, yf = y - yi;
+      var u = smooth(xf), v = smooth(yf);
+      var x0 = ((xi % period) + period) % period;
+      var y0 = ((yi % period) + period) % period;
+      var x1 = (x0 + 1) % period;
+      var y1 = (y0 + 1) % period;
+      var a = hash(x0, y0), b = hash(x1, y0);
+      var cc = hash(x0, y1), d = hash(x1, y1);
+      return (a * (1 - u) + b * u) * (1 - v) + (cc * (1 - u) + d * u) * v;
+    }
+    function fbm(x, y) {
+      var sum = 0, amp = 0.5, freq = 1, period = 8;
+      for (var o = 0; o < 4; o++) {
+        sum += noise(x * freq, y * freq, period) * amp;
+        freq *= 2; period *= 2; amp *= 0.5;
+      }
+      return sum;
+    }
+
+    /* Height field --------------------------------------------- */
+    var height = new Float32Array(size * size);
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        height[y * size + x] = fbm(x / size * 8, y / size * 8);
+      }
+    }
+
+    /* Sobel → normal (wrapping so the map tiles cleanly) -------- */
+    var strength = 2.2;
+    function h(x, y) {
+      return height[(((y % size) + size) % size) * size + (((x % size) + size) % size)];
+    }
+    for (var yy = 0; yy < size; yy++) {
+      for (var xx = 0; xx < size; xx++) {
+        var dx = (h(xx + 1, yy) - h(xx - 1, yy)) * strength;
+        var dy = (h(xx, yy + 1) - h(xx, yy - 1)) * strength;
+        /* normalise (-dx, -dy, 1) into 0..255                     */
+        var len = Math.sqrt(dx * dx + dy * dy + 1);
+        var i = (yy * size + xx) * 4;
+        img.data[i]     = ((-dx / len) * 0.5 + 0.5) * 255;
+        img.data[i + 1] = ((-dy / len) * 0.5 + 0.5) * 255;
+        img.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+        img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+
+    var tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  /* Round dot sprite for the champagne motes -------------------- */
+  function createMoteTexture() {
+    var S = 64;
+    var c = document.createElement('canvas');
+    c.width = c.height = S;
+    var ctx = c.getContext('2d');
+    var g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    g.addColorStop(0.00, 'rgba(255,244,224,1)');
+    g.addColorStop(0.35, 'rgba(212,175,55,0.55)');
+    g.addColorStop(1.00, 'rgba(212,175,55,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, S, S);
+    return new THREE.CanvasTexture(c);
+  }
+
+  /* ================================================================
+     2. RENDERER / SCENE / CAMERA
+     ================================================================ */
+  var renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    antialias: true,
+    alpha: true,
+    powerPreference: 'high-performance'
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));  /* perf cap */
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x0d0c0e, 0);
+  renderer.outputEncoding      = THREE.sRGBEncoding;
+  renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.06;
+  renderer.physicallyCorrectLights = true;
+
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0d0c0e, 0.035);
+
+  var camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 7.4);
+
+  /* ================================================================
+     3. MATERIALS
+     ================================================================ */
+  var envMap       = createEnvironmentTexture();
+  var clearcoatMap = createClearcoatNormalMap(256);
+  scene.environment = envMap;
+
+  /* --- 3.1 The hero lacquer: holographic champagne chrome ------- */
+  var rampPrimary = createLacquerRamp([
+    [0.00, '#d4af37'],  /* champagne gold      */
+    [0.22, '#fff7ee'],  /* chrome white        */
+    [0.44, '#f2c9cf'],  /* soft pastel pink    */
+    [0.64, '#efd9a2'],  /* warm champagne      */
+    [0.82, '#e8f0f6'],  /* cool chrome         */
+    [1.00, '#d4af37']   /* wrap                */
+  ]);
+  rampPrimary.repeat.set(3, 1);
+
+  var lacquerMaterial = new THREE.MeshPhysicalMaterial({
+    map:                 rampPrimary,
+    color:               0xffffff,
+    metalness:           1.0,
+    roughness:           0.10,      /* low roughness → wet gloss    */
+    clearcoat:           1.0,       /* full top coat                */
+    clearcoatRoughness:  0.06,
+    clearcoatNormalMap:  clearcoatMap,
+    clearcoatNormalScale: new THREE.Vector2(0.16, 0.16),
+    envMap:              envMap,
+    envMapIntensity:     1.35,
+    reflectivity:        1.0
+  });
+
+  /* --- 3.2 The wrapping filament: rose-gold thread -------------- */
+  var rampFilament = createLacquerRamp([
+    [0.00, '#e8b4a6'],
+    [0.30, '#fff2e4'],
+    [0.58, '#d4af37'],
+    [0.80, '#f6dcd2'],
+    [1.00, '#e8b4a6']
+  ]);
+  rampFilament.repeat.set(6, 1);
+
+  var filamentMaterial = new THREE.MeshPhysicalMaterial({
+    map:                rampFilament,
+    metalness:          1.0,
+    roughness:          0.14,
+    clearcoat:          1.0,
+    clearcoatRoughness: 0.10,
+    envMap:             envMap,
+    envMapIntensity:    1.6
+  });
+
+  /* --- 3.3 The droplet: a single bead of poured lacquer --------- */
+  var dropletMaterial = new THREE.MeshPhysicalMaterial({
+    color:              0xf7e3d6,
+    metalness:          0.92,
+    roughness:          0.08,
+    clearcoat:          1.0,
+    clearcoatRoughness: 0.04,
+    envMap:             envMap,
+    envMapIntensity:    1.5
+  });
+
+  /* --- 3.4 Soft inner glow shell (additive, no lighting) -------- */
+  var auraMaterial = new THREE.MeshBasicMaterial({
+    color:       0xd4af37,
+    transparent: true,
+    opacity:     0.055,
+    blending:    THREE.AdditiveBlending,
+    side:        THREE.BackSide,
+    depthWrite:  false
+  });
+
+  /* ================================================================
+     4. GEOMETRY — a multi-layered torus-knot sculpture
+     ================================================================ */
+  var sculpture = new THREE.Group();      /* mouse parallax pivot    */
+  var spin      = new THREE.Group();      /* autonomous slow spin    */
+  sculpture.add(spin);
+  scene.add(sculpture);
+
+  /* Layer A — the primary knot (p=2, q=3): the structural body.    */
+  var knot = new THREE.Mesh(
+    new THREE.TorusKnotGeometry(1.18, 0.40, 320, 42, 2, 3),
+    lacquerMaterial
+  );
+  spin.add(knot);
+
+  /* Layer B — a finer, faster knot (p=3, q=5) threading the body.  */
+  var filament = new THREE.Mesh(
+    new THREE.TorusKnotGeometry(1.62, 0.055, 480, 18, 3, 5),
+    filamentMaterial
+  );
+  spin.add(filament);
+
+  /* Layer C — an elongated lacquer droplet, built by revolving a
+     teardrop profile. LatheGeometry keeps it asset-free.           */
+  var profile = [];
+  for (var i = 0; i <= 28; i++) {
+    var t = i / 28;
+    /* radius swells at the base and tapers to a point at the tip   */
+    var r = Math.sin(t * Math.PI) * 0.52 * (1 - 0.34 * t) + 0.004;
+    profile.push(new THREE.Vector2(Math.max(r, 0.001), -0.95 + t * 1.9));
+  }
+  var droplet = new THREE.Mesh(new THREE.LatheGeometry(profile, 72), dropletMaterial);
+  droplet.scale.set(0.62, 0.62, 0.62);
+  sculpture.add(droplet);
+
+  /* Layer D — the aura: an oversized inverted sphere that bleeds a
+     champagne halo behind the sculpture.                           */
+  var aura = new THREE.Mesh(new THREE.SphereGeometry(3.05, 48, 48), auraMaterial);
+  sculpture.add(aura);
+
+  /* Layer E — champagne motes drifting through the scene ---------- */
+  var MOTE_COUNT = 420;
+  var motePositions = new Float32Array(MOTE_COUNT * 3);
+  var moteSeeds     = new Float32Array(MOTE_COUNT);
+  for (var m = 0; m < MOTE_COUNT; m++) {
+    motePositions[m * 3]     = (Math.random() - 0.5) * 22;
+    motePositions[m * 3 + 1] = (Math.random() - 0.5) * 14;
+    motePositions[m * 3 + 2] = (Math.random() - 0.5) * 12 - 2;
+    moteSeeds[m] = Math.random() * Math.PI * 2;
+  }
+  var moteGeometry = new THREE.BufferGeometry();
+  moteGeometry.setAttribute('position', new THREE.BufferAttribute(motePositions, 3));
+  var motes = new THREE.Points(moteGeometry, new THREE.PointsMaterial({
+    size:            0.055,
+    map:             createMoteTexture(),
+    color:           0xffe9c4,
+    transparent:     true,
+    opacity:         0.75,
+    depthWrite:      false,
+    blending:        THREE.AdditiveBlending,
+    sizeAttenuation: true
+  }));
+  scene.add(motes);
+
+  /* ================================================================
+     5. LIGHTING — a three-point champagne studio
+     ================================================================ */
+  scene.add(new THREE.HemisphereLight(0xfff3e2, 0x0d0c0e, 0.42));
+
+  var keyLight = new THREE.DirectionalLight(0xfff1dc, 3.1);   /* warm key   */
+  keyLight.position.set(4.5, 5.5, 4.0);
+  scene.add(keyLight);
+
+  var rimLight = new THREE.DirectionalLight(0xbcd4ff, 2.0);   /* cool rim   */
+  rimLight.position.set(-5.0, 1.5, -3.5);
+  scene.add(rimLight);
+
+  var roseLight = new THREE.PointLight(0xe8b4a6, 26, 18, 2);  /* rose fill  */
+  roseLight.position.set(-2.2, -2.6, 3.2);
+  scene.add(roseLight);
+
+  var goldLight = new THREE.PointLight(0xd4af37, 22, 20, 2);  /* gold kick  */
+  goldLight.position.set(3.6, -1.4, 2.6);
+  scene.add(goldLight);
+
+  /* ================================================================
+     6. LAYOUT — park the sculpture middle-right of the viewport,
+        counter-weighting the editorial column on the left.
+     ================================================================ */
+  var home = new THREE.Vector3();   /* resting position, set by layout */
+
+  function layout() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(w, h);
+
+    if (w < 760) {
+      /* Portrait: centre the form and pull it up behind the header. */
+      home.set(0, 1.30, -1.2);
+      sculpture.scale.setScalar(0.70);
+    } else if (w < 1180) {
+      home.set(1.80, 0.02, -0.4);
+      sculpture.scale.setScalar(0.80);
+    } else {
+      /* The showpiece placement: middle-right, counter-weighting the
+         editorial column and clear of the navigation bar.           */
+      home.set(2.80, 0.02, 0);
+      sculpture.scale.setScalar(0.88);
+    }
+    sculpture.position.copy(home);
+  }
+  layout();
+
+  /* ================================================================
+     7. INTERACTIVITY — mouse-tracking parallax with lerp damping
+     ================================================================ */
+  var pointer = { x: 0, y: 0 };   /* normalised −1..1, raw          */
+  var eased   = { x: 0, y: 0 };   /* smoothed, what we actually use */
+
+  function readPointer(clientX, clientY) {
+    pointer.x = (clientX / window.innerWidth) * 2 - 1;
+    pointer.y = (clientY / window.innerHeight) * 2 - 1;
+  }
+
+  window.addEventListener('pointermove', function (e) {
+    readPointer(e.clientX, e.clientY);
+  }, { passive: true });
+
+  /* Touch drags steer the sculpture too.                            */
+  window.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length) {
+      readPointer(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: true });
+
+  /* Returning the cursor to rest when it leaves the window.         */
+  window.addEventListener('pointerleave', function () {
+    pointer.x = 0; pointer.y = 0;
+  }, { passive: true });
+
+  /* Scroll adds a gentle extra tilt so the form feels connected to
+     the page rather than pinned on top of it.                       */
+  var scrollNorm = 0;
+  window.addEventListener('scroll', function () {
+    var max = Math.max(document.body.scrollHeight - window.innerHeight, 1);
+    scrollNorm = Math.min(window.scrollY / max, 1);
+  }, { passive: true });
+
+  window.addEventListener('resize', layout);
+
+  /* Pause the loop when the tab is hidden — no wasted frames.       */
+  var visible = true;
+  document.addEventListener('visibilitychange', function () {
+    visible = !document.hidden;
+    if (visible) {
+      cancelAnimationFrame(frame);   /* never run two loops at once  */
+      clock.getDelta();              /* swallow the idle time gap    */
+      animate();
+    }
+  });
+
+  /* ================================================================
+     8. RENDER LOOP
+     ================================================================ */
+  var clock  = new THREE.Clock();
+  var LERP   = 0.045;             /* damping factor for the parallax */
+  var frame  = 0;
+
+  function animate() {
+    if (!visible) return;
+    frame = requestAnimationFrame(animate);
+
+    var dt = Math.min(clock.getDelta(), 0.05);
+    var t  = clock.getElapsedTime();
+
+    /* --- 8.1 Smoothly chase the cursor (classic lerp) ----------- */
+    eased.x += (pointer.x - eased.x) * LERP;
+    eased.y += (pointer.y - eased.y) * LERP;
+
+    /* Rotation: the sculpture turns toward the cursor and tilts
+       against it, the way a held object catches the light.         */
+    sculpture.rotation.y = eased.x *  0.62;
+    sculpture.rotation.x = eased.y *  0.42 + scrollNorm * 0.35;
+    sculpture.rotation.z = eased.x * -0.14;
+
+    /* Position: a shallow counter-parallax plus a slow float.      */
+    sculpture.position.x = home.x + eased.x * -0.42;
+    sculpture.position.y = home.y + eased.y * -0.30 + Math.sin(t * 0.55) * 0.12;
+    sculpture.position.z = home.z + Math.sin(t * 0.37) * 0.18;
+
+    /* --- 8.2 Autonomous, deliberately slow rotation ------------- */
+    if (!reduceMotion) {
+      spin.rotation.y += dt * 0.13;
+      spin.rotation.x += dt * 0.05;
+      /* the filament counter-rotates to keep the layers reading    */
+      filament.rotation.z -= dt * 0.22;
+      filament.rotation.x += dt * 0.06;
+    }
+
+    /* --- 8.3 The droplet orbits the knot ------------------------ */
+    var orbit = t * 0.24;
+    droplet.position.set(
+      Math.cos(orbit) * 2.35,
+      Math.sin(t * 0.42) * 0.85,
+      Math.sin(orbit) * 2.35
+    );
+    droplet.rotation.z = Math.sin(t * 0.5) * 0.4;
+    droplet.rotation.y = orbit * 1.6;
+
+    /* --- 8.4 Colour drift: scrolling the ramp across the surface
+           fakes the hue shift of a true iridescent coat.           */
+    rampPrimary.offset.x  = (t * 0.014) % 1;
+    rampFilament.offset.x = (-t * 0.030) % 1;
+
+    /* --- 8.5 Breathing aura + drifting motes -------------------- */
+    auraMaterial.opacity = 0.045 + Math.sin(t * 0.8) * 0.018;
+
+    var pos = moteGeometry.attributes.position.array;
+    for (var i = 0; i < MOTE_COUNT; i++) {
+      var idx = i * 3;
+      pos[idx + 1] += dt * (0.045 + (i % 7) * 0.006);          /* rise */
+      pos[idx]     += Math.sin(t * 0.25 + moteSeeds[i]) * dt * 0.05;
+      if (pos[idx + 1] > 7) pos[idx + 1] = -7;                 /* wrap */
+    }
+    moteGeometry.attributes.position.needsUpdate = true;
+    motes.rotation.y = eased.x * 0.06;
+
+    /* --- 8.6 Lights drift with the cursor for a live specular --- */
+    roseLight.position.x = -2.2 + eased.x * 1.6;
+    roseLight.position.y = -2.6 - eased.y * 1.2;
+    goldLight.position.x =  3.6 + eased.x * 1.2;
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  /* ================================================================
+     9. REVEAL
+        Wait one frame so the first render lands before the UI lifts
+        into place, then release the entrance choreography.
+     ================================================================ */
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      document.body.classList.add('is-ready');
+    });
+  });
+
+  /* Safety net: never leave the page hidden if something stalls.    */
+  window.setTimeout(function () {
+    document.body.classList.add('is-ready');
+  }, 1200);
+})();
+</script>
+
+</body>
+</html>
