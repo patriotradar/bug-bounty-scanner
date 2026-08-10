@@ -1,5 +1,7 @@
 # Dependencies
 /node_modules
+sites/*/node_modules
+sites/*/.next
 /.pnp
 .pnp.js
 
