@@ -1,4 +1,6 @@
 import { login, resetPassword, signup } from "@/lib/auth-actions";
+import GlowHorizonFM from "@/components/ui/glow-horizon";
+import { AnimatedTitleFM } from "@/components/ui/glow-horizon-utils/animated-title-fm";
 
 const tutorialSteps = [
   {
@@ -36,12 +38,27 @@ const tutorialSteps = [
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
   const params = await searchParams;
   return (
-    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 16 }}>
-      <div style={{ width: "100%", maxWidth: 470 }}>
+    <main className="login-scope">
+      {/* Decorative backdrop. Sits behind .login-inner and never takes pointer
+          events, so it cannot intercept clicks on the form. */}
+      <div className="login-glow" aria-hidden="true">
+        <GlowHorizonFM variant="top" />
+      </div>
+
+      <div className="login-stack">
+        {/* This is the page's only h1. The card previously carried one; it is
+            an h2 now so the heading order stays sequential. */}
+        <div className="login-title">
+          <AnimatedTitleFM
+            title="ScopeGuard AI"
+            subtitle="Authorised research, organised — programmes, evidence and reports in one workspace."
+          />
+        </div>
+
+        <div className="login-inner">
         <section className="card">
-          <div className="brand" style={{ color: "#174f48", marginBottom: 20 }}><span className="brand-mark">S</span>ScopeGuard AI</div>
-          <h1>Authorised research workspace</h1>
-          <p className="meta">Sign in to manage your private programmes, evidence and reports.</p>
+          <h2 style={{ marginTop: 0 }}>Sign in</h2>
+          <p className="meta">Manage your private programmes, evidence and reports.</p>
           {params.error && <p className="notice warning">{params.error}</p>}
           {params.message && <p className="notice">{params.message}</p>}
           <form className="stack" style={{ marginTop: 20 }}>
@@ -80,6 +97,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </p>
           </div>
         </details>
+        </div>
       </div>
     </main>
   );

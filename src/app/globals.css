@@ -86,6 +86,47 @@ details[open] .tutorial-caret { transform: rotate(180deg); }
 .tutorial-step-title { display: block; font-size: 14px; font-weight: 750; margin-bottom: 3px; }
 .tutorial-step-body { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.55; }
 
+/* ---------------------------------------------------------------------------
+   Login: dark ambient treatment.
+
+   Every rule here is scoped under .login-scope. The same .card / .button /
+   .field classes are used across the authenticated app in light mode, so
+   nothing below may leak out of the login page.
+   --------------------------------------------------------------------------- */
+.login-scope { position: relative; display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 24px 16px; overflow: hidden; background: #050507; color: #eceafa; }
+.login-glow { position: absolute; inset: 0; z-index: 0; }
+/* The title needs a wider measure than the card, or the brand name breaks
+   across two lines. Both are centred children of .login-stack. */
+.login-stack { position: relative; z-index: 1; display: grid; justify-items: center; width: 100%; }
+.login-title { width: 100%; max-width: 760px; margin-bottom: 30px; }
+.login-inner { width: 100%; max-width: 470px; }
+
+.login-scope .card { border-color: rgba(255,255,255,.13); background: rgba(14,13,24,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 24px 70px rgba(0,0,0,.55); color: #eceafa; }
+.login-scope h1 { color: #f6f4ff; }
+.login-scope .brand { color: #d9cffb; }
+.login-scope .brand-mark { background: #6d43d8; color: #f4f0ff; }
+.login-scope .meta { color: rgba(226,222,245,.72); }
+.login-scope label { color: #e4e0f6; }
+.login-scope input { color: #f6f4ff; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.06); }
+.login-scope input::placeholder { color: rgba(226,222,245,.45); }
+.login-scope input:focus { border-color: #a558fb; box-shadow: 0 0 0 3px rgba(165,88,251,.26); }
+.login-scope .button { background: #6d43d8; }
+.login-scope .button:hover { background: #5a34bb; }
+.login-scope .button.secondary { color: #e0d9f8; border-color: rgba(255,255,255,.2); background: rgba(255,255,255,.07); }
+.login-scope .button.secondary:hover { background: rgba(255,255,255,.13); }
+.login-scope .notice { border-left-color: #a558fb; background: rgba(165,88,251,.15); }
+.login-scope .notice.warning { border-left-color: #f0b429; background: rgba(240,180,41,.15); }
+
+.login-scope .tutorial-panel { border-color: rgba(255,255,255,.13); background: rgba(14,13,24,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 24px 70px rgba(0,0,0,.55); }
+.login-scope .tutorial-summary { color: #f2efff; }
+.login-scope .tutorial-summary-icon { color: #e6ddff; background: rgba(165,88,251,.22); }
+.login-scope .tutorial-caret { color: rgba(226,222,245,.72); }
+.login-scope .tutorial-body { border-top-color: rgba(255,255,255,.13); }
+.login-scope .tutorial-intro { color: rgba(226,222,245,.72); }
+.login-scope .tutorial-step-icon { color: #e6ddff; background: rgba(165,88,251,.22); }
+.login-scope .tutorial-step-title { color: #f2efff; }
+.login-scope .tutorial-step-body { color: rgba(226,222,245,.72); }
+
 @media (max-width: 820px) {
   .topbar { height: 58px; padding: 0 15px; }
   .layout { display: block; }
