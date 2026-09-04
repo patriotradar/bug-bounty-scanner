@@ -148,3 +148,6 @@ The proposed Sprint 3 covers authentication and roles, encrypted deployment conf
 ## Safety and legal notice
 
 This software is a workflow aid, not authorisation and not legal advice. Programme terms can change. The researcher is responsible for confirming scope, permitted methods, accounts, rate limits, data-handling rules and disclosure requirements before acting. Stop if unexpected personal data, secrets, an authentication boundary or an out-of-scope redirect is encountered.
+
+
+<!-- Security scan triggered at 2026-09-04 13:05:03 -->
